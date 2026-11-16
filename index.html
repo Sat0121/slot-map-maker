@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>島図メーカー</title>
+<style>
+:root{
+  --bar:#10312D; --bar-ink:#DCEDE9; --bar-2:#1C4640;
+  --bg:#E9EFEC; --panel:#FBFDFC; --line:#D5DEDB; --ink:#171D1B; --ink2:#4A5552; --ink3:#7A8683;
+  --pri:#006A60; --pri-c:#9EF2E4; --sec-c:#CCE8E2; --err:#BA1A1A; --sel:#1F6FEB;
+  --f:"BIZ UDPGothic","Yu Gothic UI","Meiryo","Hiragino Sans","Noto Sans CJK JP","Noto Sans JP",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:13px/1.5 var(--f);color:var(--ink);background:var(--bg);overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--sel);outline-offset:1px}
+[hidden]{display:none!important}
+
+#app{display:grid;grid-template:48px minmax(0,1fr) 40px / 208px minmax(0,1fr) 316px;height:100%}
+
+/* ---- top bar ---- */
+#bar{grid-column:1/-1;background:var(--bar);color:var(--bar-ink);display:flex;align-items:center;gap:8px;padding:0 10px;min-width:0;overflow:hidden}
+@media (max-width:1320px){#pname{width:110px}#bar button{padding:0 7px}#modeSeg button{padding:0 10px}}
+.brand{display:flex;align-items:center;gap:8px;margin-right:4px}
+.brand svg{width:26px;height:26px;flex:none}
+#pname{width:150px;height:30px;border:1px solid transparent;border-radius:6px;background:transparent;color:#fff;font-weight:700;font-size:15px;padding:0 6px}
+#pname:hover{border-color:#3d6a63}#pname:focus{background:#fff;color:var(--ink);outline:none}
+.grp{display:flex;gap:2px}
+#bar button{height:30px;border:0;border-radius:6px;background:transparent;color:var(--bar-ink);padding:0 10px;white-space:nowrap}
+#bar button:hover{background:var(--bar-2)}
+#bar button:disabled{opacity:.35;pointer-events:none}
+#bar .sepv{width:1px;height:22px;background:#35605a}
+#modeSeg{display:flex;background:#0A2421;border-radius:8px;padding:3px;gap:2px}
+#modeSeg button{height:28px;padding:0 14px;border-radius:6px;font-weight:700}
+#modeSeg button[aria-pressed=true]{background:var(--pri-c);color:#00201C}
+#bar label{display:flex;align-items:center;gap:6px;white-space:nowrap;color:#B7CEC9}
+#bar select{height:28px;border-radius:6px;border:1px solid #3d6a63;background:var(--bar);color:var(--bar-ink);padding:0 4px}
+.sp{flex:1}
+#bar #bExport{background:var(--pri-c);color:#00201C;font-weight:700;padding:0 16px}
+#bar #bExport:hover{background:#B8F7EC}
+
+/* ---- side panels ---- */
+aside{background:var(--panel);overflow:auto;padding:12px}
+#left{border-right:1px solid var(--line)}
+#right{border-left:1px solid var(--line)}
+aside h3{font-size:13px;margin:0 0 8px;display:flex;align-items:baseline;gap:8px}
+aside h3 small{font-weight:400;color:var(--ink3)}
+aside h4{font-size:12px;margin:14px 0 6px;color:var(--ink2)}
+.hint{color:var(--ink3);font-size:12px;margin:8px 0}
+.pal{display:grid;gap:4px;margin-bottom:14px}
+.pal button{display:flex;align-items:center;gap:10px;height:38px;border:1px solid transparent;border-radius:8px;background:transparent;padding:0 8px;text-align:left}
+.pal button:hover{background:#EDF3F1;border-color:var(--line)}
+.pal svg{width:30px;height:30px;flex:none}
+.f{display:grid;gap:3px;margin-bottom:8px;font-size:12px;color:var(--ink2)}
+.f input,.f select,.f textarea,.segrow input,.segrow select,.mini input,.mini select{height:30px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:0 7px;color:var(--ink);width:100%;min-width:0}
+.f textarea{height:60px;padding:6px 7px;resize:vertical}
+.f input[type=color]{padding:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.btn{height:30px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:0 10px;white-space:nowrap}
+.btn:hover{background:#EDF3F1}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:700}
+.btn.pri:hover{background:#00574F}
+.btn.danger{color:var(--err)}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.4;pointer-events:none}
+.segrow{display:grid;grid-template-columns:38px repeat(4,minmax(0,1fr)) 24px;gap:4px;align-items:end;margin-bottom:6px;padding:6px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.segrow label{font-size:11px;color:var(--ink3);display:grid;gap:2px}
+.segrow input,.segrow select{height:26px;padding:0 4px}
+.tag{align-self:center;justify-self:start;font-size:11px;font-weight:700;border-radius:4px;padding:2px 5px;background:var(--sec-c);color:#05201C}
+.tag.arc{background:#D6E3FF;color:#001B3E}
+.x{height:26px;width:24px;border:0;background:transparent;border-radius:4px;color:var(--ink3);font-size:15px;padding:0}
+.x:hover{background:#FFDAD6;color:var(--err)}
+details{border-top:1px solid var(--line);padding:8px 0}
+summary{cursor:pointer;font-weight:700;font-size:12px;color:var(--ink2)}
+details>div{padding-top:8px}
+.mini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;font-size:11px;color:var(--ink3);margin-bottom:6px}
+.mini label{display:grid;gap:2px}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);margin:4px 0}
+.sws{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 10px;align-items:center}
+.sws button{width:22px;height:22px;border-radius:6px;border:1px solid #B9C4C0;padding:0}
+.sws button[aria-pressed=true]{outline:2px solid var(--sel);outline-offset:1px}
+.sws input[type=color]{width:26px;height:24px;border:1px solid var(--line);border-radius:6px;padding:1px;background:#fff}
+.mks{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px}
+.mks button{display:flex;align-items:center;gap:6px;height:34px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:0 8px;font-size:12px;white-space:nowrap}
+.mks button:hover{background:#EDF3F1}
+.mks button[aria-pressed=true]{background:var(--sec-c);border-color:var(--pri);font-weight:700}
+.mks svg{width:22px;height:22px;flex:none}
+.marks{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:8px}
+.marks button{height:28px;border:0;border-left:1px solid var(--line);background:#fff}
+.marks button:first-child{border-left:0}
+.marks button[aria-pressed=true]{background:var(--sec-c);font-weight:700}
+table.ct{width:100%;border-collapse:collapse;margin-top:6px}
+table.ct th{font-size:11px;color:var(--ink3);font-weight:400;text-align:left;padding:2px 3px}
+table.ct td{padding:1px}
+table.ct td:first-child{width:24px;color:var(--ink3);font-size:11px;text-align:right;padding-right:4px}
+table.ct input{width:100%;height:26px;border:1px solid var(--line);border-radius:4px;padding:0 5px;background:#fff}
+table.ct td:nth-child(2){width:78px}
+.mlist{display:grid;gap:2px}
+.mrow{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:center;height:30px;border-radius:6px;padding:0 4px;border:0;background:transparent;text-align:left;width:100%}
+.mrow:hover{background:#EDF3F1}
+.mrow i{width:18px;height:18px;border-radius:5px;border:1px solid #B9C4C0;display:block}
+.mrow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow b{font-weight:400;color:var(--ink3);font-variant-numeric:tabular-nums}
+#find{width:100%;height:32px;border:1px solid var(--line);border-radius:16px;padding:0 12px;background:#fff;margin-bottom:10px}
+
+/* ---- stage ---- */
+#stage{position:relative;overflow:hidden;background-color:var(--bg)}
+#cv{width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none;touch-action:none;cursor:grab}
+#cv.panning{cursor:grabbing}
+body.m-layout #cv [data-o]{cursor:move}
+body.m-cells #cv .m{cursor:pointer}
+#cv [data-h]{cursor:pointer}
+#cv .m.sel>rect,#cv .m.sel>path{fill:var(--sel)}
+#cv .m.sel text{fill:#fff;fill-opacity:1}
+#cv .m.sel .bd *{fill:#fff;stroke:#fff}
+#cv[data-view=detail] .n1,#cv[data-view=detail] .gl{display:none}
+#cv[data-view=number] .n2,#cv[data-view=number] .nm,#cv[data-view=number] .gl{display:none}
+#cv[data-view=model] .n0,#cv[data-view=model] .n1,#cv[data-view=model] .n2,#cv[data-view=model] .nm,#cv[data-view=model] .bd{display:none}
+#empty{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;color:var(--ink3);text-align:center;font-size:14px}
+#toast{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:#2B3230;color:#ECF2EF;padding:8px 14px;border-radius:6px;transition:opacity .2s;pointer-events:none;max-width:80%}
+#toast.off{opacity:0}
+
+/* ---- footer ---- */
+#foot{grid-column:1/-1;background:var(--panel);border-top:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 10px}
+#tabs{display:flex;gap:2px;align-items:center;overflow-x:auto;min-width:0}
+.tab{height:28px;border:1px solid transparent;border-radius:6px;background:transparent;padding:0 12px;white-space:nowrap}
+.tab:hover{background:#EDF3F1}
+.tab.on{background:var(--sec-c);font-weight:700}
+.tab input{height:22px;width:110px;border:1px solid var(--sel);border-radius:4px;padding:0 4px}
+#foot .btn{height:26px;padding:0 8px;font-size:12px}
+#stat{color:var(--ink3);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+#zl{min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
+
+/* ---- dialogs ---- */
+dialog{border:0;border-radius:14px;padding:22px 24px;max-width:min(880px,92vw);color:var(--ink);box-shadow:0 12px 48px rgb(0 0 0 / .28);font:13px/1.6 var(--f)}
+dialog::backdrop{background:rgb(16 49 45 / .45)}
+dialog h2{margin:0 0 12px;font-size:18px}
+.dbtns{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.exgrid{display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px}
+.expv{background:repeating-conic-gradient(#e6e9e8 0 25%,#f6f8f7 0 50%) 0 0/16px 16px;border-radius:8px;display:grid;place-items:center;min-height:340px;max-height:60vh;overflow:hidden;padding:10px}
+.expv img{max-width:100%;max-height:calc(60vh - 20px);box-shadow:0 1px 6px rgb(0 0 0 / .2)}
+.wel{display:grid;gap:8px;margin-top:14px}
+.wel button{display:grid;gap:2px;text-align:left;border:1px solid var(--line);border-radius:10px;background:#fff;padding:12px 14px}
+.wel button:hover{border-color:var(--pri);background:#F1F8F6}
+.wel b{font-size:14px}.wel span{color:var(--ink3);font-size:12px}
+#dBulk textarea{width:100%;height:120px;border:1px solid var(--line);border-radius:6px;padding:8px;font:13px/1.5 var(--f)}
+#dBulk .row2{gap:14px}
+kbd{font:12px var(--f);background:#EEF2F0;border:1px solid var(--line);border-radius:4px;padding:0 5px}
+.help{display:grid;grid-template-columns:1fr 1fr;gap:6px 26px;max-width:720px}
+.help h4{margin:10px 0 2px;grid-column:1/-1;font-size:13px;color:var(--pri)}
+.help div{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dotted var(--line);padding:2px 0}
+</style>
+</head>
+<body class="m-layout">
+<div id="app">
+  <header id="bar">
+    <div class="brand">
+      <svg viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="6" fill="#9EF2E4"/><rect x="5" y="5" width="6" height="16" rx="2" fill="#10312D"/><path d="M15 21V12a6 6 0 0 1 6-6" fill="none" stroke="#10312D" stroke-width="4" stroke-linecap="round"/></svg>
+      <input id="pname" aria-label="島図の名前" title="島図の名前（店名など）" spellcheck="false">
+    </div>
+    <div class="grp"><button id="bNew">新規</button><button id="bOpen">開く</button><button id="bSave" title="Ctrl+S">保存</button></div>
+    <span class="sepv"></span>
+    <div class="grp"><button id="bUndo" title="Ctrl+Z">元に戻す</button><button id="bRedo" title="Ctrl+Y">やり直す</button></div>
+    <span class="sepv"></span>
+    <div id="modeSeg" role="group" aria-label="編集モード"><button data-mode="layout" aria-pressed="true">配置を編集</button><button data-mode="cells" aria-pressed="false">台情報を入力</button></div>
+    <label>表示<select id="viewSel"><option value="auto">自動</option><option value="detail">台番号と機種名</option><option value="number">台番号のみ</option><option value="model">機種名ラベル</option></select></label>
+    <label><input type="checkbox" id="snapChk" checked>グリッドに合わせる</label>
+    <span class="sp"></span>
+    <button id="bHelp">使い方</button>
+    <button id="bExport">画像を書き出す</button>
+  </header>
+
+  <aside id="left"></aside>
+
+  <main id="stage">
+    <svg id="cv" data-view="detail"><g id="world"><g id="gObjs"></g><g id="gOver"></g></g></svg>
+    <div id="empty" hidden><div>左の一覧から島や設備を選んで追加します。<br>島の端の ■ をドラッグすると台数を増やせます。</div></div>
+    <div id="toast" class="off" role="status"></div>
+  </main>
+
+  <aside id="right"></aside>
+
+  <footer id="foot">
+    <div id="tabs"></div>
+    <button class="btn" id="fAdd">＋ フロアを追加</button>
+    <button class="btn" id="fRen">名前を変更</button>
+    <button class="btn" id="fDup">複製</button>
+    <button class="btn" id="fL" title="左へ移動">◀</button><button class="btn" id="fR" title="右へ移動">▶</button>
+    <button class="btn danger" id="fDel">削除</button>
+    <span class="sp"></span>
+    <span id="stat"></span>
+    <button class="btn" id="zOut" aria-label="縮小">−</button><span id="zl">100%</span><button class="btn" id="zIn" aria-label="拡大">＋</button>
+    <button class="btn" id="zFit">全体を表示</button>
+  </footer>
+</div>
+
+<dialog id="dWelcome">
+  <h2>島図メーカー</h2>
+  <div>パチンコ・スロット店の島図を作り、画像として書き出します。</div>
+  <div class="wel">
+    <button data-w="sample"><b>サンプルを開く</b><span>架空のホールの島図（直線・両面・円弧つきの島・円卓）と、形の見本フロアが入っています</span></button>
+    <button data-w="blank"><b>空の島図から始める</b><span>何もない状態から島を並べます</span></button>
+    <button data-w="open"><b>保存したファイルを開く</b><span>以前保存した .shimazu.json を読み込みます</span></button>
+  </div>
+  <div id="welWarn" hidden><p class="hint">いま開いている島図は閉じます。残したいときは、先に「保存」でファイルにしてください。</p><div class="dbtns"><button class="btn" data-close>キャンセル</button></div></div>
+</dialog>
+
+<dialog id="dExport">
+  <h2>画像を書き出す</h2>
+  <div class="exgrid">
+    <div>
+      <label class="f"><span>範囲</span><select id="exScope"><option value="cur">表示中のフロア</option><option value="all1">全フロアを1枚に並べる</option><option value="each">全フロアを別々の画像にする</option></select></label>
+      <label class="f"><span>台の表示</span><select id="exMode"><option value="detail">台番号と機種名</option><option value="number">台番号のみ</option><option value="model">機種名ラベル（全体図向き）</option></select></label>
+      <label class="f"><span>大きさ</span><select id="exScale"><option value="1">小さめ（等倍）</option><option value="2">標準（2倍）</option><option value="3" selected>高精細（3倍）</option><option value="4">印刷向け（4倍）</option></select></label>
+      <label class="f"><span>形式</span><select id="exFmt"><option value="png">PNG</option><option value="jpg">JPEG</option><option value="svg">SVG（拡大しても劣化しない）</option></select></label>
+      <label class="f"><span>背景</span><select id="exBg"><option value="#FFFFFF">白</option><option value="#E9EFEC">グレー</option><option value="">透明（PNG・SVG）</option></select></label>
+      <label class="chk"><input type="checkbox" id="exTitle" checked>店名とフロア名を入れる</label>
+      <label class="chk"><input type="checkbox" id="exMarks" checked>印（●▲✕）を入れる</label>
+      <div class="hint" id="exInfo"></div>
+    </div>
+    <div class="expv"><img id="exImg" alt="書き出しプレビュー"></div>
+  </div>
+  <div class="dbtns"><button class="btn" data-close>キャンセル</button><button class="btn pri" id="exGo">書き出す</button></div>
+</dialog>
+
+<dialog id="dBulk">
+  <h2>まとめて入力</h2>
+  <div class="hint" id="bkInfo"></div>
+  <div class="row2">
+    <label class="f"><span>台番号（空白か改行で区切る。Excelの列をそのまま貼り付けできます）</span><textarea id="bkNums" spellcheck="false"></textarea></label>
+    <label class="f"><span>機種（1行に「機種名 台数」。台数を省くと1台）</span><textarea id="bkModels" spellcheck="false"></textarea></label>
+  </div>
+  <label class="chk"><input type="checkbox" id="bkLoop">両面の島は折り返して並べる（A面の端からB面へ戻る）</label>
+  <div class="dbtns"><button class="btn" data-close>キャンセル</button><button class="btn pri" id="bkGo">入力する</button></div>
+</dialog>
+
+<dialog id="dHelp">
+  <h2>使い方</h2>
+  <div class="help">
+    <h4>画面の移動</h4>
+    <div><span>拡大・縮小</span><kbd>ホイール</kbd></div><div><span>画面を動かす</span><span>何もない所をドラッグ</span></div>
+    <h4>配置を編集</h4>
+    <div><span>追加</span><span>左の一覧をクリック</span></div><div><span>移動</span><span>ドラッグ</span></div>
+    <div><span>回転</span><span>上の ● をドラッグ</span></div><div><span>台数を増減</span><span>島の端の ■ をドラッグ</span></div>
+    <div><span>複数選択</span><span><kbd>Shift</kbd>+クリック／ドラッグ</span></div><div><span>細かく動かす</span><kbd>矢印キー</kbd></div>
+    <div><span>複製</span><kbd>Ctrl+D</kbd></div><div><span>削除</span><kbd>Delete</kbd></div>
+    <div><span>吸着を一時的に切る</span><span><kbd>Alt</kbd>を押しながら</span></div><div><span>形をつなぐ</span><span>右の「直線／円弧をつなぐ」</span></div>
+    <h4>台情報を入力</h4>
+    <div><span>台を選ぶ</span><span>クリック</span></div><div><span>範囲で選ぶ</span><span>ドラッグ／<kbd>Shift</kbd>+クリック</span></div>
+    <div><span>次の台へ</span><kbd>Enter</kbd></div><div><span>前の台へ</span><kbd>Shift+Enter</kbd></div>
+    <div><span>島の全台を選ぶ</span><kbd>Ctrl+A</kbd></div><div><span>連番・まとめて入力</span><span>右のパネル</span></div>
+    <h4>保存</h4>
+    <div><span>ファイルに保存</span><kbd>Ctrl+S</kbd></div><div><span>自動保存</span><span>このブラウザ内に常時</span></div>
+  </div>
+  <div class="dbtns"><button class="btn pri" data-close>閉じる</button></div>
+</dialog>
+
+<datalist id="mdl"></datalist>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+
+<script>
+'use strict';
+/* =====================================================================
+   島図メーカー  — 1ファイルで動く島図エディタ
+   データ: P={name,models{機種:色},floors[{name,objs[]}]}
+   島(island)は「始点・向き＋区間(直線/円弧)の列」で表し、台は区間ごとに a面/b面 の配列で持つ
+   ===================================================================== */
+const $=s=>document.querySelector(s);
+const f2=v=>+(+v).toFixed(2);
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const D2R=Math.PI/180;
+const TH={bg:'#E9EFEC',floor:'#F4FBF8',isl:'#DDE4E1',cell:'#FFFFFF',ink:'#171D1B',inkV:'#3F4947',dim:'#6F7977',err:'#BA1A1A'};
+const STY={floor:{n:'床',fill:'#F4FBF8',ink:'#3F4947'},room:{n:'部屋・設備',fill:'#E3EAE7',ink:'#3F4947'},block:{n:'ブロック（他の島など）',fill:'#E9EFEC',ink:'#6F7977'},wall:{n:'壁・柱',fill:'#BEC9C6',ink:'#3F4947'}};
+const FONT="'BIZ UDPGothic','Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans CJK JP','Noto Sans JP',sans-serif";
+const SW=['#FFFFFF','#FFE08B','#FFDBCB','#D6E3FF','#C9EBCF','#FFD9E3','#E9DDFF','#B9ECF0','#FFDAD6','#E3E4D4'];
+const SELC='#1F6FEB';
+const IN=1.3,GAP=3.2,PAD=5;
+const KEY='shimazu-maker:v1';
+const BLANK=()=>({n:'',m:'',k:'',t:''});
+const NOCELL=BLANK();
+const em=t=>[...String(t)].reduce((a,c)=>a+(/[\x20-\x7e｡-ﾟ]/.test(c)?.58:1),0);
+const ROTC=/[ー－〜～…‥（）()「」『』【】\-―=＝]/;
+
+let P, ui={floor:0,mode:'layout',view:'auto',sel:[],csel:[],anchor:null,grid:6,snap:true,num:{start:'',step:1,loop:true,rev:false}};
+let V={s:1,tx:0,ty:0};
+const cv=$('#cv'),world=$('#world'),gObjs=$('#gObjs'),gOver=$('#gOver'),stage=$('#stage');
+const floor=()=>P.floors[ui.floor];
+const byId=id=>floor().objs.find(o=>o.id===id);
+const nid=()=>'o'+(P.nid++);
+const newProject=()=>({app:'shimazu-maker',v:1,name:'島図メーカー',nid:2,models:{},skip:'49',skipMode:'any',floors:[{id:'o1',name:'1F',objs:[]}]});
+
+/* ---------- 島の幾何 ---------- */
+function fixIsland(o){
+  o.sides=+o.sides===2?2:1;o.depth=Math.max(8,+o.depth||36);o.rot=+o.rot||0;
+  const minR=(o.sides===2?o.depth:o.depth/2)+4;
+  for(const s of o.segs){
+    s.n=Math.max(0,Math.min(300,Math.round(+s.n||0)));
+    if(s.k==='l')s.p=Math.max(6,+s.p||24);
+    else{s.r=Math.max(minR,+s.r||minR);s.ang=Math.max(1,Math.min(360,+s.ang||90));s.turn=s.turn==='L'?'L':'R'}
+    for(const k of['a','b']){s[k]=s[k]||[];while(s[k].length<s.n)s[k].push(BLANK());s[k].length=s.n}
+  }
+  return o;
+}
+function geom(o){
+  const D=o.depth,oL=o.sides===2?D:D/2;let x=o.x,y=o.y,th=o.rot*D2R;const G=[];
+  for(const s of o.segs){
+    if(s.k==='l'){const len=s.n*s.p,g={s,k:'l',x0:x,y0:y,th0:th,end:len};x+=Math.cos(th)*len;y+=Math.sin(th)*len;G.push(g)}
+    else{const sg=s.turn==='R'?1:-1,phi=s.ang*D2R,g={s,k:'a',x0:x,y0:y,th0:th,sg,R:s.r,cx:x-sg*s.r*Math.sin(th),cy:y+sg*s.r*Math.cos(th),end:phi};
+      th+=sg*phi;x=g.cx+sg*s.r*Math.sin(th);y=g.cy-sg*s.r*Math.cos(th);G.push(g)}
+  }
+  return {G,oL,oR:-oL,ex:x,ey:y,eth:th};
+}
+// 区間gの、道のり(直線)／角度(円弧) u・左オフセット o の点
+function gpt(g,u,o){
+  if(g.k==='l'){const c=Math.cos(g.th0),s=Math.sin(g.th0);return [g.x0+c*u+s*o,g.y0+s*u-c*o]}
+  const t=g.th0+g.sg*u,r=g.sg*g.R+o;return [g.cx+r*Math.sin(t),g.cy-r*Math.cos(t)];
+}
+const gth=(g,u)=>g.k==='l'?g.th0:g.th0+g.sg*u;
+const pp=p=>f2(p[0])+' '+f2(p[1]);
+function arcCmd(g,u0,u1,o){
+  const r=f2(Math.abs(g.sg*g.R+o)),sw=g.sg*(u1-u0)>0?1:0,st=Math.max(1,Math.ceil(Math.abs(u1-u0)/2.0));let d='';
+  for(let i=1;i<=st;i++)d+=`A${r} ${r} 0 0 ${sw} ${pp(gpt(g,u0+(u1-u0)*i/st,o))}`;
+  return d;
+}
+function outline(ge){
+  const {G,oL,oR}=ge;if(!G.length)return '';
+  if(G.length===1&&G[0].k==='a'&&G[0].s.ang>=359.5){const g=G[0],r=f2(g.R+Math.abs(oL));return `M${f2(g.cx-r)} ${f2(g.cy)}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0Z`}
+  let d='M'+pp(gpt(G[0],0,oL));
+  for(const g of G)d+=g.k==='l'?'L'+pp(gpt(g,g.end,oL)):arcCmd(g,0,g.end,oL);
+  const last=G[G.length-1];d+='L'+pp(gpt(last,last.end,oR));
+  for(let i=G.length-1;i>=0;i--){const g=G[i];d+=g.k==='l'?'L'+pp(gpt(g,0,oR)):arcCmd(g,g.end,0,oR)}
+  return d+'Z';
+}
+function islPts(ge){const pts=[];for(const g of ge.G){const st=g.k==='l'?1:Math.max(2,Math.ceil(g.end/(8*D2R)));for(let i=0;i<=st;i++){const u=g.end*i/st;pts.push(gpt(g,u,ge.oL),gpt(g,u,ge.oR))}}return pts}
+// 文字の向き：島の向きに沿わせつつ、常に読みやすい角度（-45〜45°）へ正規化
+function normAng(deg){let a=((deg%360)+360)%360,k=0;while(a>45){a-=90;k++}return {a,along:k%2===0}}
+const rowsOf=o=>o.sides===2?[['a',IN,o.depth-IN],['b',-o.depth+IN,-IN]]:[['a',-o.depth/2+IN,o.depth/2-IN]];
+function eachCell(o,ge,fn){
+  const rows=rowsOf(o);
+  ge.G.forEach((g,si)=>{const s=g.s;if(!s.n)return;
+    for(const [side,o0,o1] of rows){const arr=s[side],om=(o0+o1)/2;
+      for(let i=0;i<s.n;i++){const c=arr[i]||NOCELL,pm=i>0?(arr[i-1]||NOCELL).m:c.m,nm=i<s.n-1?(arr[i+1]||NOCELL).m:c.m;
+        const ib=pm!==c.m?GAP:IN,ia=nm!==c.m?GAP:IN;let u0,u1,al;
+        if(g.k==='l'){u0=i*s.p+ib;u1=(i+1)*s.p-ia;al=u1-u0}
+        else{const rm=Math.abs(g.sg*g.R+om),da=g.end/s.n;u0=i*da+ib/rm;u1=(i+1)*da-ia/rm;al=rm*(u1-u0)}
+        const um=(u0+u1)/2,ct=gpt(g,um,om),na=normAng(gth(g,um)/D2R);
+        fn({g,si,side,i,c,u0,u1,o0,o1,cx:ct[0],cy:ct[1],ang:na.a,tw:na.along?al:o1-o0,th:na.along?o1-o0:al});
+      }}});
+}
+const cellSeq=o=>{const out=[];for(const side of(o.sides===2?['a','b']:['a']))o.segs.forEach((s,si)=>{for(let i=0;i<s.n;i++)out.push(si+':'+side+':'+i)});return out};
+const getCell=(o,k)=>{const [si,side,i]=k.split(':');return o.segs[si]&&o.segs[si][side]&&o.segs[si][side][i]};
+const countCells=o=>o.segs.reduce((a,s)=>a+s.n*o.sides,0);
+
+/* ---------- SVG 生成（画面と書き出しで共通） ---------- */
+function inkOn(hex){const n=parseInt(hex.slice(1),16),r=n>>16,g=n>>8&255,b=n&255;return r*.299+g*.587+b*.114>150?TH.ink:'#FFFFFF'}
+const tx=(s,fs,fill,w,x='')=>`<text dy=".36em" font-size="${f2(fs)}" font-weight="${w}" text-anchor="middle" fill="${fill}"${x}>${esc(s)}</text>`;
+function stack(s,fs,fill,w){const ch=[...s];return ch.map((c,i)=>{const y=f2((i-(ch.length-1)/2)*fs*1.04);return tx(c,fs,fill,w,` y="${y}"`+(ROTC.test(c)?` transform="rotate(90 0 ${y})"`:''))}).join('')}
+const trf=(x,y,a)=>`translate(${f2(x)} ${f2(y)})`+(a?` rotate(${f2(a)})`:'');
+function fitName(name,maxEm){let w=0,out='';for(const ch of name){const e=em(ch);if(w+e>maxEm)break;w+=e;out+=ch}return out||[...name][0]||''}
+function cellSVG(q,mode,marks){
+  const c=q.c,col=(c.m&&P.models[c.m])||TH.cell,ink=inkOn(col),t=trf(q.cx,q.cy,q.ang),W=q.tw,H=q.th;
+  let shape;
+  if(q.g.k==='l')shape=`<rect x="${f2(-W/2)}" y="${f2(-H/2)}" width="${f2(W)}" height="${f2(H)}" rx="${W<28?3:4}" transform="${t}" fill="${col}"/>`;
+  else{const g=q.g;shape=`<path d="M${pp(gpt(g,q.u0,q.o0))}${arcCmd(g,q.u0,q.u1,q.o0)}L${pp(gpt(g,q.u1,q.o1))}${arcCmd(g,q.u1,q.u0,q.o1)}Z" fill="${col}"/>`}
+  const num=c.n,fs1=Math.max(3,Math.min(11,(W-4)/(Math.max(3,num.length)*.58),H-3)),fs2=Math.min(9.5,fs1*.9),nfs=Math.max(3,Math.min(W<28?4.6:6.4,H*.32));
+  const T=(cls,y,fs,w,s,op)=>`<text class="${cls}" y="${f2(y)}" dy=".36em" font-size="${f2(fs)}" font-weight="${w}" text-anchor="middle" fill="${ink}"${op?' fill-opacity=".72"':''}>${esc(s)}</text>`;
+  const nm=c.m?fitName(c.m,(W-3)/nfs):'';let s='';
+  if(mode==='screen'){
+    if(c.m&&num)s=T('n1',0,fs1,700,num)+T('n2',-H*.18,fs2,700,num)+T('nm',H*.24,nfs,500,nm,1);
+    else if(num)s=T('n0',0,fs1,700,num);
+    else if(c.m)s=T('nm',0,nfs,500,nm,1);
+  }else if(mode==='detail'){
+    if(c.m&&num)s=T('',-H*.18,fs2,700,num)+T('',H*.24,nfs,500,nm,1);else if(num)s=T('',0,fs1,700,num);else if(c.m)s=T('',0,nfs,500,nm,1);
+  }else if(mode==='number'&&num)s=T('',0,fs1,700,num);
+  if(c.k&&marks&&mode!=='model'){const sm=W<28,k=c.k;
+    s+=`<g class="bd" transform="translate(${f2(W/2-(sm?3.4:4.6))} ${f2(-H/2+(sm?3.4:4.6))})${sm?' scale(.7)':''}">`+
+      (k==='●'?`<circle r="3.2" fill="${TH.err}"/>`:k==='▲'?`<path d="M0 -3.6L3.3 2.4L-3.3 2.4Z" fill="${TH.err}"/>`:`<path d="M-2.8 -2.8L2.8 2.8M2.8 -2.8L-2.8 2.8" fill="none" stroke="${TH.err}" stroke-width="1.6" stroke-linecap="round"/>`)+'</g>';}
+  return `<g class="m" data-c="${q.si}:${q.side}:${q.i}">${shape}<g transform="${t}" pointer-events="none">${s}</g></g>`;
+}
+function labelSVG(name,c,ang,W,H,ink){
+  const n=[...name].length,fh=Math.min(20,(W-6)/em(name),H-5),fv=Math.min(26,W-5,(H-8)/n/1.04);
+  if(Math.max(fh,fv)<4)return '';
+  return `<g transform="${trf(c[0],c[1],ang)}">${fh>=fv?tx(name,fh,ink,700):stack(name,fv,ink,700)}</g>`;
+}
+function groupLabels(o,ge){
+  let s='';const rows=rowsOf(o);
+  for(const g of ge.G){const sg=g.s;for(const [side,o0,o1] of rows){const arr=sg[side],om=(o0+o1)/2;let i=0;
+    while(i<sg.n){const m=arr[i].m;let j=i;while(j+1<sg.n&&arr[j+1].m===m)j++;
+      if(m){let L,um;
+        if(g.k==='l'){L=(j-i+1)*sg.p-2*GAP;um=(i+j+1)/2*sg.p}
+        else{const rm=Math.abs(g.sg*g.R+om),da=g.end/sg.n;L=2*rm*Math.sin(Math.min((j-i+1)*da,Math.PI)/2)-2*GAP;um=(i+j+1)/2*da}
+        const na=normAng(gth(g,um)/D2R);
+        s+=labelSVG(m,gpt(g,um,om),na.a,na.along?L:o1-o0,na.along?o1-o0:L,inkOn(P.models[m]||TH.cell));}
+      i=j+1}}}
+  return `<g class="gl" pointer-events="none">${s}</g>`;
+}
+function islandSVG(o,mode,marks){
+  const ge=geom(o);let s=`<path d="${outline(ge)}" fill="${TH.isl}" stroke="${TH.isl}" stroke-width="${PAD*2}" stroke-linejoin="round"/>`;
+  eachCell(o,ge,q=>{s+=cellSVG(q,mode,marks)});
+  if(mode==='screen'||mode==='model')s+=groupLabels(o,ge);
+  return s;
+}
+function boxLabel(label,fs,W,H,ink,w){
+  if(!label)return '';const e=em(label),n=[...label].length;
+  if(e*fs<=W-4||H<=W)return tx(label,Math.max(3,Math.min(fs,(W-4)/e)),ink,w);
+  return stack(label,Math.max(3,Math.min(fs,(H-6)/n/1.04,W-4)),ink,w);
+}
+// 部屋・設備の専用マーク（24×24の枠・中心原点で描く）
+const HEAD='<circle cx="0" cy="-8.6" r="2.7"/>';
+const MARK={
+  smoke:{n:'喫煙所',c:'#59645F',d:'<rect x="-10.5" y="3.2" width="14.2" height="4.2" rx=".7"/><rect x="4.9" y="3.2" width="1.7" height="4.2"/><rect x="7.8" y="3.2" width="1.7" height="4.2"/><path d="M8.6 1.2c0-2.2 1.8-2.4 1.8-4.6S8.6-5.8 8.6-8M5 1.2c0-2.2 1.8-2.4 1.8-4.6S5-5.8 5-8" fill="none" stroke="#59645F" stroke-width="1.4" stroke-linecap="round"/>'},
+  men:{n:'男子トイレ',c:'#3F6AB0',d:HEAD+'<path transform="scale(.7 1)" d="M-5.5 -5h11a1.5 1.5 0 0 1 1.5 1.5v6.5h-2.2v-5h-.8v13.5h-3.2v-8h-1.6v8h-3.2v-13.5h-.8v5h-2.2v-6.5a1.5 1.5 0 0 1 1.5-1.5z"/>'},
+  women:{n:'女子トイレ',c:'#C8506E',d:HEAD+'<path transform="scale(.7 1)" d="M-4 -5h8a1.5 1.5 0 0 1 1.4 1l2.4 7-2 .7-2-5.8h-.5l2.9 9.1h-3v4.5h-2.6v-4.5h-1.2v4.5h-2.6v-4.5h-3l2.9-9.1h-.5l-2 5.8-2-.7 2.4-7a1.5 1.5 0 0 1 1.4-1z"/>'},
+};
+const markSVG=(k,size)=>`<g transform="scale(${f2(size/24)})" fill="${MARK[k].c}">${MARK[k].d}</g>`;
+function roomInner(o,W,H,ink){
+  if(!MARK[o.icon])return boxLabel(o.label,o.fs||16,W,H,ink,500);
+  const fs=o.label?Math.max(3,Math.min(o.fs||16,(W-4)/em(o.label))):0,lh=fs*1.25,gap=o.label?Math.min(6,H*.04):0;
+  const sz=Math.min(W*.62,(H-lh-gap)*.8,64);
+  if(sz<9||!o.label)return markSVG(o.icon,Math.min(W*.8,H*.8,64));
+  const tot=sz+gap+lh;
+  return `<g transform="translate(0 ${f2(-tot/2+sz/2)})">${markSVG(o.icon,sz)}</g><g transform="translate(0 ${f2(tot/2-lh/2)})">${tx(o.label,fs,ink,500)}</g>`;
+}
+function rectSVG(o){
+  const st=STY[o.style]||STY.room,fill=o.fill||st.fill,na=normAng(o.rot);
+  return `<g transform="${trf(o.x,o.y,o.rot)}"><rect x="${f2(-o.w/2)}" y="${f2(-o.h/2)}" width="${f2(o.w)}" height="${f2(o.h)}" rx="${f2(Math.min(o.rx||0,o.w/2,o.h/2))}" fill="${fill}"/>`+
+    (o.label||MARK[o.icon]?`<g transform="rotate(${f2(na.a-o.rot)})" pointer-events="none">${roomInner(o,na.along?o.w:o.h,na.along?o.h:o.w,st.ink)}</g>`:'')+'</g>';
+}
+function polySVG(o){
+  const st=STY[o.style]||STY.floor,fill=o.fill||st.fill,r=o.round||0;
+  let s=`<path d="M${o.pts.map(pp).join('L')}Z" fill="${fill}"${r?` stroke="${fill}" stroke-width="${r*2}" stroke-linejoin="round"`:''}/>`;
+  if(o.label){const b=bbOf([o]);s+=`<g transform="${trf((b.x0+b.x1)/2,(b.y0+b.y1)/2,0)}" pointer-events="none">${boxLabel(o.label,o.fs||16,b.x1-b.x0,b.y1-b.y0,st.ink,500)}</g>`}
+  return s;
+}
+const TONE={normal:[TH.inkV,500],dim:[TH.dim,500],strong:[TH.ink,700]};
+function textDims(o){const n=Math.max(1,[...(o.text||'')].length);return o.vert?[o.fs*1.15,n*o.fs*1.04]:[Math.max(o.fs,em(o.text||'')*o.fs),o.fs*1.25]}
+function textSVG(o,mode){
+  const [c,w]=TONE[o.tone]||TONE.normal,[W,H]=textDims(o);
+  return `<g transform="${trf(o.x,o.y,o.rot)}">`+(mode==='screen'?`<rect x="${f2(-W/2-3)}" y="${f2(-H/2-2)}" width="${f2(W+6)}" height="${f2(H+4)}" fill="transparent"/>`:'')+
+    (o.vert?stack(o.text||'',o.fs,c,w):tx(o.text||'',o.fs,c,w))+'</g>';
+}
+const objSVG=(o,mode,marks=true)=>o.t==='island'?islandSVG(o,mode,marks):o.t==='rect'?rectSVG(o):o.t==='poly'?polySVG(o):textSVG(o,mode);
+const zOf=o=>o.t==='island'?2:o.t==='text'?3:o.style==='floor'?0:1;
+const sorted=f=>f.objs.map((o,i)=>[zOf(o),i,o]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]).map(x=>x[2]);
+const isFloorish=o=>o.t!=='island'&&o.t!=='text'&&o.style==='floor';
+
+function rectPts(x,y,w,h,rot){const r=rot*D2R,c=Math.cos(r),s=Math.sin(r);return [[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([a,b])=>[x+a*c-b*s,y+a*s+b*c])}
+function objPts(o){if(o.t==='island')return islPts(geom(o));if(o.t==='rect')return rectPts(o.x,o.y,o.w,o.h,o.rot);if(o.t==='poly')return o.pts;const [w,h]=textDims(o);return rectPts(o.x,o.y,w,h,o.rot)}
+function bbOf(objs){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const o of objs){const pd=o.t==='island'?PAD:o.t==='poly'?(o.round||0):0;for(const [x,y] of objPts(o)){x0=Math.min(x0,x-pd);y0=Math.min(y0,y-pd);x1=Math.max(x1,x+pd);y1=Math.max(y1,y+pd)}}return x1<x0?null:{x0,y0,x1,y1}}
+
+/* ---------- 画面描画 ---------- */
+function drawAll(){
+  gObjs.innerHTML=sorted(floor()).map(o=>`<g data-o="${o.id}">${objSVG(o,'screen')}</g>`).join('');
+  $('#empty').hidden=floor().objs.length>0;
+  applyCellSel();drawOver();stat();
+}
+function drawObj(o){const el=gObjs.querySelector(`[data-o="${o.id}"]`);if(!el){drawAll();return}el.innerHTML=objSVG(o,'screen');if(ui.mode==='cells')applyCellSel()}
+function applyCellSel(){
+  gObjs.querySelectorAll('.m.sel').forEach(e=>e.classList.remove('sel'));
+  if(ui.mode!=='cells')return;const by={};ui.csel.forEach(r=>(by[r.o]=by[r.o]||new Set()).add(r.k));
+  for(const id in by){const g=gObjs.querySelector(`[data-o="${id}"]`);if(g)g.querySelectorAll('.m').forEach(e=>{if(by[id].has(e.dataset.c))e.classList.add('sel')})}
+}
+function stat(){let n=0;floor().objs.forEach(o=>{if(o.t==='island')n+=countCells(o)});$('#stat').textContent=`このフロア ${n}台`}
+function applyView(){
+  world.setAttribute('transform',`translate(${f2(V.tx)} ${f2(V.ty)}) scale(${V.s.toFixed(4)})`);
+  const t=ui.mode==='cells'?[.6,1.2]:[.85,1.5];cv.dataset.view=ui.view==='auto'?(V.s<t[0]?'model':V.s<t[1]?'number':'detail'):ui.view;
+  const g=24*V.s;
+  stage.style.backgroundImage=g>=10?'linear-gradient(to right,rgb(0 0 0 / .045) 1px,transparent 1px),linear-gradient(to bottom,rgb(0 0 0 / .045) 1px,transparent 1px)':'none';
+  stage.style.backgroundSize=`${g}px ${g}px`;stage.style.backgroundPosition=`${V.tx}px ${V.ty}px`;
+  $('#zl').textContent=Math.round(V.s*100)+'%';drawOver();
+}
+function zoomAt(fac,px,py){const ns=Math.max(.12,Math.min(8,V.s*fac)),wx=(px-V.tx)/V.s,wy=(py-V.ty)/V.s;V={s:ns,tx:px-wx*ns,ty:py-wy*ns};applyView()}
+function fitView(bb){
+  bb=bb||bbOf(floor().objs)||{x0:0,y0:0,x1:600,y1:400};const r=stage.getBoundingClientRect(),m=40;
+  const s=Math.max(.12,Math.min(3,(r.width-m*2)/(bb.x1-bb.x0),(r.height-m*2)/(bb.y1-bb.y0)));
+  V={s,tx:r.width/2-(bb.x0+bb.x1)/2*s,ty:r.height/2-(bb.y0+bb.y1)/2*s};applyView();
+}
+function selObjs(){return ui.sel.map(byId).filter(Boolean)}
+function drawOver(){
+  const k=1/V.s;let s='';
+  const H=(h,x,y,sq)=>sq?`<rect data-h="${h}" x="${f2(x-5*k)}" y="${f2(y-5*k)}" width="${f2(10*k)}" height="${f2(10*k)}" fill="#fff" stroke="${SELC}" stroke-width="${f2(1.6*k)}"/>`
+    :`<circle data-h="${h}" cx="${f2(x)}" cy="${f2(y)}" r="${f2(5.5*k)}" fill="#fff" stroke="${SELC}" stroke-width="${f2(1.6*k)}"/>`;
+  if(ui.mode==='layout'){
+    const os=selObjs();
+    for(const o of os){
+      const st=`fill="none" stroke="${SELC}" stroke-width="${f2(1.6*k)}" pointer-events="none"`;
+      if(o.t==='island')s+=`<path d="${outline(geom(o))}" ${st} stroke-linejoin="round"/>`;
+      else s+=`<path d="M${objPts(o).map(pp).join('L')}Z" ${st}/>`;
+    }
+    if(os.length){const bb=bbOf(os),cx=(bb.x0+bb.x1)/2,ty=bb.y0-26*k;
+      s+=`<path d="M${f2(cx)} ${f2(bb.y0)}V${f2(ty)}" stroke="${SELC}" stroke-width="${f2(k)}" pointer-events="none"/>`+H('rot',cx,ty);}
+    if(os.length===1){const o=os[0];
+      if(o.t==='island'){const ge=geom(o);s+=H('end',ge.ex,ge.ey,1)}
+      if(o.t==='rect')objPts(o).forEach((p,i)=>s+=H('c'+i,p[0],p[1],1));
+      if(o.t==='poly'){o.pts.forEach((p,i)=>{const q=o.pts[(i+1)%o.pts.length];s+=`<circle data-h="m:${i}" cx="${f2((p[0]+q[0])/2)}" cy="${f2((p[1]+q[1])/2)}" r="${f2(3.5*k)}" fill="${SELC}" fill-opacity=".45"/>`});o.pts.forEach((p,i)=>s+=H('v:'+i,p[0],p[1],1))}
+    }
+  }
+  if(dr&&dr.type==='marq'){const x=Math.min(dr.p0[0],dr.p1[0]),y=Math.min(dr.p0[1],dr.p1[1]);
+    s+=`<rect x="${f2(x)}" y="${f2(y)}" width="${f2(Math.abs(dr.p1[0]-dr.p0[0]))}" height="${f2(Math.abs(dr.p1[1]-dr.p0[1]))}" fill="${SELC}" fill-opacity=".1" stroke="${SELC}" stroke-width="${f2(k)}" pointer-events="none"/>`}
+  gOver.innerHTML=s;
+}
+
+/* ---------- 履歴・保存 ---------- */
+let hist=[],hi=-1,saveT=0,fileHandle=null;
+function commit(){
+  const s=JSON.stringify(P);if(hist[hi]===s)return;
+  hist.splice(hi+1);hist.push(s);if(hist.length>80)hist.shift();hi=hist.length-1;
+  clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,s)}catch(e){}},300);
+  undoUI();stat();
+}
+function undoUI(){$('#bUndo').disabled=hi<=0;$('#bRedo').disabled=hi>=hist.length-1}
+function timeTravel(d){if(hi+d<0||hi+d>=hist.length)return;hi+=d;P=JSON.parse(hist[hi]);try{localStorage.setItem(KEY,hist[hi])}catch(e){}refresh(false)}
+function sanitize(d){
+  if(!d||!Array.isArray(d.floors)||!d.floors.length)throw new Error('bad');
+  d.models=d.models||{};d.name=!d.name||d.name==='\u65b0\u3057\u3044\u5cf6\u56f3'?'島図メーカー':d.name;d.skip=d.skip==null?'49':String(d.skip);d.skipMode=d.skipMode||'any';
+  let mx=1;d.floors.forEach(f=>{f.objs=f.objs||[];f.name=f.name||'フロア';f.objs.forEach(o=>{const n=+String(o.id).slice(1)||0;if(n>mx)mx=n;if(o.t==='island')fixIsland(o)})});
+  d.nid=Math.max(+d.nid||1,mx+1);return d;
+}
+function load(d,fit=true){P=sanitize(d);ui.floor=0;ui.sel=[];ui.csel=[];hist=[];hi=-1;commit();refresh(fit)}
+function refresh(fit){
+  ui.floor=Math.min(ui.floor,P.floors.length-1);
+  ui.sel=ui.sel.filter(byId);ui.csel=ui.csel.filter(r=>{const o=byId(r.o);return o&&getCell(o,r.k)});
+  $('#pname').value=P.name;drawAll();renderTabs();renderLeft();renderPanel();undoUI();if(fit)fitView();
+}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.remove('off');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.add('off'),2600)}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+const safeName=s=>String(s).replace(/[\\/:*?"<>|]/g,'_');
+async function saveFile(){
+  const data=JSON.stringify(P,null,1),name=safeName(P.name)+'.shimazu.json';
+  try{
+    if(window.showSaveFilePicker){
+      if(!fileHandle)fileHandle=await showSaveFilePicker({suggestedName:name,types:[{description:'島図データ',accept:{'application/json':['.json']}}]});
+      const w=await fileHandle.createWritable();await w.write(data);await w.close();toast('保存しました：'+fileHandle.name);return;
+    }
+  }catch(e){if(e.name==='AbortError')return;fileHandle=null}
+  download(new Blob([data],{type:'application/json'}),name);toast('ダウンロードフォルダに保存しました：'+name);
+}
+function openFile(){$('#fileIn').value='';$('#fileIn').click()}
+function readFile(file){const r=new FileReader();r.onload=()=>{try{load(JSON.parse(r.result));fileHandle=null;toast('開きました：'+file.name);$('#dWelcome').close()}catch(e){toast('読み込めませんでした。島図メーカーで保存した .json ファイルを選んでください')}};r.readAsText(file)}
+$('#fileIn').onchange=e=>{if(e.target.files[0])readFile(e.target.files[0])};
+addEventListener('dragover',e=>e.preventDefault());
+addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)readFile(f)});
+
+/* ---------- オブジェクト操作 ---------- */
+const L=(n,p=24)=>({k:'l',n,p});
+const A=(n,r,ang,turn='R')=>({k:'a',n,r,ang,turn});
+const mkIsland=(sides,segs,depth=36)=>fixIsland({id:nid(),t:'island',name:'',x:0,y:0,rot:0,depth,sides,segs});
+const PRE={
+  line2:['直線の島（両面）',()=>mkIsland(2,[L(10)])],
+  line1:['直線の島（片面）',()=>mkIsland(1,[L(10)])],
+  arc:['円弧の島',()=>mkIsland(1,[A(6,120,90)])],
+  round:['円卓',()=>mkIsland(1,[A(8,46,360)],30)],
+  lsh:['L字の島',()=>mkIsland(1,[L(8),A(3,60,90),L(5)])],
+  ush:['U字の島',()=>mkIsland(1,[L(7),A(6,66,180),L(7)])],
+  ssh:['S字の島',()=>mkIsland(1,[A(5,110,75,'R'),A(5,110,75,'L')])],
+  room:['部屋・設備',()=>({id:nid(),t:'rect',x:0,y:0,w:144,h:96,rot:0,rx:14,style:'room',label:'部屋',fs:18})],
+  smoke:['喫煙所',()=>({id:nid(),t:'rect',x:0,y:0,w:96,h:120,rot:0,rx:14,style:'room',label:'喫煙所',fs:16,icon:'smoke'})],
+  men:['男子トイレ',()=>({id:nid(),t:'rect',x:0,y:0,w:120,h:120,rot:0,rx:14,style:'room',label:'男子トイレ',fs:14,icon:'men'})],
+  women:['女子トイレ',()=>({id:nid(),t:'rect',x:0,y:0,w:120,h:120,rot:0,rx:14,style:'room',label:'女子トイレ',fs:14,icon:'women'})],
+  block:['ブロック（他の島など）',()=>({id:nid(),t:'rect',x:0,y:0,w:240,h:36,rot:0,rx:12,style:'block',label:'',fs:16})],
+  wall:['壁・柱',()=>({id:nid(),t:'rect',x:0,y:0,w:192,h:12,rot:0,rx:2,style:'wall',label:'',fs:12})],
+  floor:['床（自由な形）',()=>({id:nid(),t:'poly',pts:[[0,0],[720,0],[720,480],[0,480]],style:'floor',label:'',fs:16,round:10})],
+  text:['文字',()=>({id:nid(),t:'text',x:0,y:0,text:'通路名',fs:14,vert:false,rot:0,tone:'normal'})],
+};
+const ICON={
+  line2:'<rect x="2" y="8" width="26" height="14" rx="3" fill="#C4CFCB"/><path d="M2 15h26M8.5 8v14M15 8v14M21.5 8v14" stroke="#fff" stroke-width="1.2"/>',
+  line1:'<rect x="2" y="11" width="26" height="8" rx="3" fill="#C4CFCB"/><path d="M8.5 11v8M15 11v8M21.5 11v8" stroke="#fff" stroke-width="1.2"/>',
+  arc:'<path d="M5 25A20 20 0 0 1 25 5" fill="none" stroke="#C4CFCB" stroke-width="8" stroke-linecap="round"/>',
+  round:'<circle cx="15" cy="15" r="9" fill="none" stroke="#C4CFCB" stroke-width="7"/><path d="M15 3v7M15 20v7M3 15h7M20 15h7" stroke="#fff" stroke-width="1.2"/>',
+  lsh:'<path d="M4 7h12a8 8 0 0 1 8 8v11" fill="none" stroke="#C4CFCB" stroke-width="7" stroke-linecap="round"/>',
+  ush:'<path d="M6 5v12a9 9 0 0 0 18 0V5" fill="none" stroke="#C4CFCB" stroke-width="7" stroke-linecap="round"/>',
+  ssh:'<path d="M4 9c8-6 10 0 11 6s4 12 11 6" fill="none" stroke="#C4CFCB" stroke-width="7" stroke-linecap="round"/>',
+  room:'<rect x="4" y="6" width="22" height="18" rx="4" fill="#E3EAE7" stroke="#B9C4C0"/><path d="M10 15h10" stroke="#7A8683" stroke-width="1.6"/>',
+  smoke:'<rect x="3" y="3" width="24" height="24" rx="5" fill="#E3EAE7" stroke="#B9C4C0"/><g transform="translate(15 15) scale(.8)" fill="#59645F">'+MARK.smoke.d+'</g>',
+  men:'<rect x="3" y="3" width="24" height="24" rx="5" fill="#E3EAE7" stroke="#B9C4C0"/><g transform="translate(15 15.3) scale(.86)" fill="#3F6AB0">'+MARK.men.d+'</g>',
+  women:'<rect x="3" y="3" width="24" height="24" rx="5" fill="#E3EAE7" stroke="#B9C4C0"/><g transform="translate(15 15.3) scale(.86)" fill="#C8506E">'+MARK.women.d+'</g>',
+  block:'<rect x="3" y="10" width="24" height="10" rx="4" fill="#E9EFEC" stroke="#B9C4C0"/>',
+  wall:'<rect x="3" y="13" width="24" height="4" rx="1" fill="#A9B5B1"/>',
+  floor:'<path d="M4 10h9V4h13v22H4z" fill="#F4FBF8" stroke="#B9C4C0" stroke-linejoin="round"/>',
+  text:'<path d="M8 8h14M15 8v15" stroke="#4A5552" stroke-width="2.4" stroke-linecap="round"/>',
+};
+const sn=(v,e)=>ui.snap&&!(e&&e.altKey)?Math.round(v/ui.grid)*ui.grid:v;
+function moveObj(o,dx,dy){if(o.t==='poly')o.pts=o.pts.map(p=>[f2(p[0]+dx),f2(p[1]+dy)]);else{o.x=f2(o.x+dx);o.y=f2(o.y+dy)}}
+function rotObj(o,d,cx,cy){
+  const r=d*D2R,c=Math.cos(r),s=Math.sin(r),R=(x,y)=>[f2(cx+(x-cx)*c-(y-cy)*s),f2(cy+(x-cx)*s+(y-cy)*c)];
+  if(o.t==='poly')o.pts=o.pts.map(q=>R(q[0],q[1]));else{[o.x,o.y]=R(o.x,o.y);o.rot=f2((((o.rot+d)%360)+360)%360)}
+}
+function refPt(o){
+  if(o.t==='poly')return o.pts[0];
+  if(o.t==='rect'){const r=((o.rot%180)+180)%180;return r===0?[o.x-o.w/2,o.y-o.h/2]:r===90?[o.x-o.h/2,o.y-o.w/2]:[o.x,o.y]}
+  return [o.x,o.y];
+}
+function addObj(kind){
+  const o=PRE[kind][1](),r=stage.getBoundingClientRect(),bb=bbOf([o]);
+  const cx=(r.width/2-V.tx)/V.s,cy=(r.height/2-V.ty)/V.s;
+  moveObj(o,cx-(bb.x0+bb.x1)/2,cy-(bb.y0+bb.y1)/2);const rp=refPt(o);moveObj(o,sn(rp[0])-rp[0],sn(rp[1])-rp[1]);
+  let g=0;while(g++<20&&floor().objs.some(q=>{const a=refPt(q),b=refPt(o);return Math.abs(a[0]-b[0])<1&&Math.abs(a[1]-b[1])<1}))moveObj(o,24,24);
+  floor().objs.push(o);ui.sel=[o.id];commit();drawAll();renderPanel();
+}
+function blankCopy(o){const c=clone(o);c.id=nid();if(c.t==='island')c.segs.forEach(s=>{s.a=s.a.map(BLANK);s.b=s.b.map(BLANK)});return c}
+function duplicateSel(){
+  const os=selObjs();if(!os.length)return;const ids=[];
+  os.forEach(o=>{const c=blankCopy(o);moveObj(c,24,24);floor().objs.push(c);ids.push(c.id)});
+  ui.sel=ids;commit();drawAll();renderPanel();toast('複製しました（台情報は空です）');
+}
+function deleteSel(){if(!ui.sel.length)return;const f=floor();f.objs=f.objs.filter(o=>!ui.sel.includes(o.id));ui.sel=[];commit();drawAll();renderPanel()}
+let clip=null;
+function copySel(){const os=selObjs();if(os.length){clip=clone(os);toast(os.length+'個をコピーしました')}}
+function pasteClip(){if(!clip)return;const ids=[];clip.forEach(o=>{const c=clone(o);c.id=nid();moveObj(c,24,24);floor().objs.push(c);ids.push(c.id)});clip=clone(clip);clip.forEach(o=>moveObj(o,24,24));ui.sel=ids;commit();drawAll();renderPanel()}
+function alignSel(how){
+  const os=selObjs();if(os.length<2)return;const bs=os.map(o=>bbOf([o])),all=bbOf(os);
+  if(how==='dh'||how==='dv'){const ax=how==='dh'?['x0','x1']:['y0','y1'];const idx=os.map((o,i)=>i).sort((a,b)=>(bs[a][ax[0]]+bs[a][ax[1]])-(bs[b][ax[0]]+bs[b][ax[1]]));
+    const c=i=>(bs[i][ax[0]]+bs[i][ax[1]])/2,c0=c(idx[0]),c1=c(idx[idx.length-1]);
+    idx.forEach((i,k)=>{const d=c0+(c1-c0)*k/(idx.length-1)-c(i);moveObj(os[i],how==='dh'?d:0,how==='dv'?d:0)})}
+  else os.forEach((o,i)=>{const b=bs[i];moveObj(o,how==='l'?all.x0-b.x0:how==='r'?all.x1-b.x1:how==='ch'?(all.x0+all.x1-b.x0-b.x1)/2:0,how==='t'?all.y0-b.y0:how==='b'?all.y1-b.y1:how==='cv'?(all.y0+all.y1-b.y0-b.y1)/2:0)});
+  commit();drawAll();
+}
+
+/* ---------- 台の選択と入力 ---------- */
+function rangeRefs(a,b){const o=byId(a.o);if(!o)return [b];const seq=cellSeq(o),i=seq.indexOf(a.k),j=seq.indexOf(b.k);if(i<0||j<0)return [b];return seq.slice(Math.min(i,j),Math.max(i,j)+1).map(k=>({o:a.o,k}))}
+function orderedSel(loop,rev){
+  const by=new Map();ui.csel.forEach(r=>{if(!by.has(r.o))by.set(r.o,new Set());by.get(r.o).add(r.k)});
+  let out=[];
+  floor().objs.forEach(o=>{const set=by.get(o.id);if(!set)return;const seq=cellSeq(o).filter(k=>set.has(k));
+    const a=seq.filter(k=>k.split(':')[1]==='a'),b=seq.filter(k=>k.split(':')[1]==='b');
+    out=out.concat(a.concat(loop?b.reverse():b).map(k=>({o,c:getCell(o,k)})))});
+  return rev?out.reverse():out;
+}
+const skipHit=n=>{const d=P.skip.replace(/\D/g,'');if(!d)return false;const s=String(Math.abs(n));return P.skipMode==='last'?d.includes(s[s.length-1]):[...s].some(c=>d.includes(c))};
+function numberSel(){
+  let n=parseInt(ui.num.start,10);if(isNaN(n)){toast('開始番号を入れてください');return}
+  const list=orderedSel(ui.num.loop,ui.num.rev),step=+ui.num.step||1;
+  for(const it of list){let g=0;while(skipHit(n)&&g++<2000)n+=step;it.c.n=String(n);n+=step}
+  afterCellEdit(list,true);toast(list.length+'台に連番を振りました');
+}
+function afterCellEdit(list,final){new Set(list.map(i=>i.o)).forEach(drawObj);applyCellSel();if(final){commit();renderLeft();renderPanel()}}
+function setCells(fn,final){const objs=new Set();ui.csel.forEach(r=>{const o=byId(r.o),c=o&&getCell(o,r.k);if(c){fn(c);objs.add(o)}});objs.forEach(drawObj);applyCellSel();if(final){commit();renderLeft()}}
+function focusCell(field){const el=$(`#right [data-k="${field||'cn'}"]`)||$('#right [data-k="cm"]');if(el){el.focus({preventScroll:true});el.select&&el.select()}}
+function cellCenter(r){const o=byId(r.o);let p=null;eachCell(o,geom(o),q=>{if(q.si+':'+q.side+':'+q.i===r.k)p=[q.cx,q.cy]});return p}
+function ensureVisible(r){const p=cellCenter(r);if(!p)return;const b=stage.getBoundingClientRect(),x=p[0]*V.s+V.tx,y=p[1]*V.s+V.ty,m=60;if(x<m||y<m||x>b.width-m||y>b.height-m){V.tx+=b.width/2-x;V.ty+=b.height/2-y;applyView()}}
+function advance(dir,field){
+  const r=ui.csel[ui.csel.length-1];if(!r)return;const seq=cellSeq(byId(r.o)),i=seq.indexOf(r.k)+dir;
+  if(i<0||i>=seq.length){toast('この島の端です');return}
+  ui.csel=[{o:r.o,k:seq[i]}];ui.anchor=ui.csel[0];selChanged();ensureVisible(ui.csel[0]);focusCell(field);
+}
+function navCell(dx,dy,field){
+  const r=ui.csel[ui.csel.length-1];if(!r)return;const all=[];
+  floor().objs.forEach(o=>{if(o.t==='island')eachCell(o,geom(o),q=>all.push({o:o.id,k:q.si+':'+q.side+':'+q.i,x:q.cx,y:q.cy}))});
+  const cur=all.find(c=>c.o===r.o&&c.k===r.k);if(!cur)return;let best=null,bd=1e9;
+  for(const c of all){const vx=c.x-cur.x,vy=c.y-cur.y,al=vx*dx+vy*dy,pe=Math.abs(vx*dy-vy*dx);if(al<1||pe>al)continue;const d=al+pe*2;if(d<bd){bd=d;best=c}}
+  if(best){ui.csel=[{o:best.o,k:best.k}];ui.anchor=ui.csel[0];selChanged();ensureVisible(ui.csel[0]);if(field)focusCell(field)}
+}
+function selectModel(m){
+  const refs=[];floor().objs.forEach(o=>{if(o.t==='island')cellSeq(o).forEach(k=>{if(getCell(o,k).m===m)refs.push({o:o.id,k})})});
+  if(!refs.length){toast('このフロアには「'+m+'」がありません');return}
+  ui.csel=refs;ui.anchor=refs[0];selChanged();
+}
+function findNumber(v){
+  v=v.trim();if(!v)return;
+  for(let fi=0;fi<P.floors.length;fi++){const f=P.floors[(ui.floor+fi)%P.floors.length];
+    for(const o of f.objs){if(o.t!=='island')continue;const k=cellSeq(o).find(k=>getCell(o,k).n===v);
+      if(k){if(P.floors.indexOf(f)!==ui.floor){ui.floor=P.floors.indexOf(f);ui.sel=[];refresh(true)}
+        ui.csel=[{o:o.id,k}];ui.anchor=ui.csel[0];selChanged();const p=cellCenter(ui.csel[0]),b=stage.getBoundingClientRect(),s=Math.max(V.s,1.6);V={s,tx:b.width/2-p[0]*s,ty:b.height/2-p[1]*s};applyView();return}}}
+  toast('台番号「'+v+'」は見つかりませんでした');
+}
+function setMode(m){
+  ui.mode=m;document.body.className='m-'+m;
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===m)));
+  renderLeft();applyView();selChanged();
+}
+function selChanged(){drawOver();applyCellSel();renderPanel()}
+
+/* ---------- 左パネル ---------- */
+function modelCounts(){const m=new Map();P.floors.forEach(f=>f.objs.forEach(o=>{if(o.t==='island')o.segs.forEach(s=>{for(const k of(o.sides===2?['a','b']:['a']))s[k].forEach(c=>{if(c.m)m.set(c.m,(m.get(c.m)||0)+1)})})}));return m}
+function renderLeft(){
+  const mc=modelCounts();$('#mdl').innerHTML=[...mc.keys()].map(m=>`<option value="${esc(m)}">`).join('');
+  if(ui.mode==='layout'){
+    const sec=(t,ks)=>`<h3>${t}</h3><div class="pal">${ks.map(k=>`<button data-add="${k}"><svg viewBox="0 0 30 30">${ICON[k]}</svg>${PRE[k][0]}</button>`).join('')}</div>`;
+    $('#left').innerHTML=sec('島を追加',['line2','line1','arc','round','lsh','ush','ssh'])+sec('設備・文字を追加',['room','smoke','men','women','block','wall','floor','text'])+
+      '<p class="hint">追加した島は、右のパネルで直線や円弧をつないで好きな形にできます。</p>';
+  }else{
+    $('#left').innerHTML='<h3>台を探す</h3><input id="find" placeholder="台番号を入力して Enter" inputmode="numeric">'+
+      `<h3>機種 <small>${mc.size}機種</small></h3>`+(mc.size?'<div class="mlist">'+[...mc.entries()].map(([m,n])=>`<button class="mrow" data-model="${esc(m)}" title="クリックでこの機種の台を選択"><i style="background:${P.models[m]||'#fff'}"></i><span>${esc(m)}</span><b>${n}</b></button>`).join('')+'</div>'
+      :'<p class="hint">機種名を入力すると、ここに一覧が出ます。</p>');
+  }
+}
+$('#left').addEventListener('click',e=>{const a=e.target.closest('[data-add]'),m=e.target.closest('[data-model]');if(a)addObj(a.dataset.add);if(m)selectModel(m.dataset.model)});
+$('#left').addEventListener('keydown',e=>{if(e.target.id==='find'&&e.key==='Enter')findNumber(e.target.value)});
+
+/* ---------- 右パネル ---------- */
+const fld=(label,k,v,at='')=>`<label class="f"><span>${label}</span><input data-k="${k}" value="${esc(v)}" ${at}></label>`;
+const num=(label,k,v,at='')=>fld(label,k,f2(v),'type="number" '+at);
+const opt=(v,t,cur)=>`<option value="${v}"${String(v)===String(cur)?' selected':''}>${t}</option>`;
+const styleSel=o=>`<label class="f"><span>種類</span><select data-k="style">${Object.entries(STY).map(([k,s])=>opt(k,s.n,o.style)).join('')}</select></label>`;
+const fillRow=o=>`<label class="f"><span>色（変えたいときだけ）</span><input type="color" data-k="fill" value="${o.fill||(STY[o.style]||STY.room).fill}"></label>${o.fill?'<div class="btns"><button class="btn" data-act="nofill">元の色に戻す</button></div>':''}`;
+const common='<div class="btns"><button class="btn" data-act="dup">複製</button><button class="btn danger" data-act="del">削除</button></div>';
+function renderPanel(){
+  const R=$('#right');
+  if(ui.mode==='cells'){R.innerHTML=cellsPanel();return}
+  const os=selObjs();
+  if(!os.length){R.innerHTML='<h3>配置を編集</h3><p class="hint">島や設備をクリックして選ぶと、ここで形や大きさを変えられます。</p><p class="hint">台番号や機種名は、上の「台情報を入力」に切り替えて入れます。島をダブルクリックしても切り替わります。</p>';return}
+  if(os.length>1){R.innerHTML=`<h3>${os.length}個を選択中</h3><h4>そろえる</h4><div class="btns">${[['l','左'],['ch','左右中央'],['r','右'],['t','上'],['cv','上下中央'],['b','下']].map(([k,t])=>`<button class="btn" data-act="al-${k}">${t}</button>`).join('')}</div><h4>等間隔に並べる</h4><div class="btns"><button class="btn" data-act="al-dh">横方向</button><button class="btn" data-act="al-dv">縦方向</button></div>${common}`;return}
+  const o=os[0];let h='';
+  if(o.t==='island'){
+    h=`<h3>島 <small>${countCells(o)}台</small></h3>`+
+      `<div class="row3">${num('X','x',o.x)}${num('Y','y',o.y)}${num('向き（度）','rot',o.rot)}</div>`+
+      `<div class="btns"><button class="btn" data-act="r-90">左へ90°</button><button class="btn" data-act="r90">右へ90°</button><button class="btn" data-act="flip" title="台の並び順を保ったまま、始点と終点を入れ替えます">前後を反転</button></div>`+
+      `<div class="row2"><label class="f"><span>台の列</span><select data-k="sides">${opt(1,'片面',o.sides)}${opt(2,'両面（背中合わせ）',o.sides)}</select></label>${num('台の奥行','depth',o.depth,'min="8"')}</div>`+
+      '<h4>島の形（始点から順につながります）</h4>'+
+      o.segs.map((s,i)=>s.k==='l'
+        ?`<div class="segrow"><span class="tag">直線</span><label>台数<input type="number" min="0" data-k="s.${i}.n" value="${s.n}"></label><label>台の幅<input type="number" min="6" data-k="s.${i}.p" value="${f2(s.p)}"></label><span></span><span></span><button class="x" data-act="segdel" data-i="${i}" title="この区間を外す"${o.segs.length<2?' disabled':''}>×</button></div>`
+        :`<div class="segrow"><span class="tag arc">円弧</span><label>台数<input type="number" min="0" data-k="s.${i}.n" value="${s.n}"></label><label>半径<input type="number" data-k="s.${i}.r" value="${f2(s.r)}"></label><label>角度<input type="number" min="1" max="360" data-k="s.${i}.ang" value="${f2(s.ang)}"></label><label>向き<select data-k="s.${i}.turn">${opt('R','右',s.turn)}${opt('L','左',s.turn)}</select></label><button class="x" data-act="segdel" data-i="${i}" title="この区間を外す"${o.segs.length<2?' disabled':''}>×</button></div>`).join('')+
+      '<div class="btns"><button class="btn" data-act="addl">＋ 直線をつなぐ</button><button class="btn" data-act="adda">＋ 円弧をつなぐ</button></div>'+
+      '<p class="hint">島の端の ■ をドラッグしても台数を変えられます。角度を360にすると円卓になります。</p>'+
+      '<button class="btn pri wide" data-act="tocells">この島の台情報を入力</button>'+
+      `<details style="margin-top:12px"><summary>同じ島を並べて複製</summary><div><div class="mini"><label>増やす数<input type="number" id="arrN" value="3" min="1" max="40"></label><label>間隔<input type="number" id="arrD" value="108"></label><label>方向<select id="arrDir"><option value="h">横へ</option><option value="v">縦へ</option></select></label></div><button class="btn" data-act="array">並べて複製</button></div></details>`+
+      fld('メモ（図には出ません）','name',o.name||'')+common;
+  }else if(o.t==='rect'){
+    h=`<h3>${(STY[o.style]||STY.room).n}</h3>${styleSel(o)}<div class="f" style="margin-bottom:2px"><span>マーク</span></div><div class="mks"><button data-icon="" aria-pressed="${!MARK[o.icon]}">なし</button>${Object.entries(MARK).map(([k,m])=>`<button data-icon="${k}" aria-pressed="${o.icon===k}" title="${m.n}"><svg viewBox="-13 -13 26 26" aria-hidden="true">${markSVG(k,24)}</svg>${m.n}</button>`).join('')}</div>${fld('ラベル（空にするとマークだけ）','label',o.label||'')}`+
+      `<div class="row2">${num('幅','w',o.w,'min="4"')}${num('高さ','h',o.h,'min="4"')}</div><div class="row3">${num('X（中心）','x',o.x)}${num('Y（中心）','y',o.y)}${num('向き（度）','rot',o.rot)}</div>`+
+      `<div class="row2">${num('角の丸み','rx',o.rx||0,'min="0"')}${num('文字の大きさ','fs',o.fs||16,'min="4"')}</div>${fillRow(o)}${common}`;
+  }else if(o.t==='poly'){
+    h=`<h3>${(STY[o.style]||STY.floor).n}（自由な形）</h3>${styleSel(o)}${fld('ラベル','label',o.label||'')}<div class="row2">${num('角の丸み','round',o.round||0,'min="0"')}${num('文字の大きさ','fs',o.fs||16,'min="4"')}</div>${fillRow(o)}`+
+      '<p class="hint">■ をドラッグして角を動かします。辺の中ほどの ● をドラッグすると角が増えます。Alt を押しながら ■ をクリックすると角を消せます。</p>'+common;
+  }else{
+    h=`<h3>文字</h3>${fld('内容','text',o.text||'')}<div class="row2">${num('大きさ','fs',o.fs,'min="4"')}${num('向き（度）','rot',o.rot)}</div>`+
+      `<div class="row2"><label class="f"><span>書き方</span><select data-k="vert">${opt('0','横書き',o.vert?1:0)}${opt('1','縦書き',o.vert?1:0)}</select></label><label class="f"><span>濃さ</span><select data-k="tone">${opt('normal','ふつう',o.tone)}${opt('dim','うすい',o.tone)}${opt('strong','太く濃い',o.tone)}</select></label></div>${common}`;
+  }
+  R.innerHTML=h;
+}
+function cellsPanel(){
+  const n=ui.csel.length;
+  if(!n)return '<h3>台情報を入力</h3><p class="hint">台をクリックして選び、台番号と機種名を入力します。Enter で次の台へ進みます。</p><p class="hint">ドラッグ、または Shift を押しながらクリックで、まとめて選べます。まとめて選ぶと、連番や機種名を一度に入れられます。</p>';
+  const list=ui.csel.map(r=>getCell(byId(r.o),r.k)),c0=list[0],one=n===1;
+  const same=k=>list.every(c=>c[k]===c0[k]),m=same('m')?c0.m:'',col=m&&P.models[m]||'#FFFFFF',mk=same('k')?c0.k:null;
+  let h=`<h3>台情報 <small>${one?'1台':n+'台を選択中'}</small></h3>`;
+  if(one)h+=fld('台番号','cn',c0.n,'inputmode="numeric" autocomplete="off"');
+  h+=fld(one?'機種名':'機種名（選択中の全台に入ります）','cm',m,`list="mdl" autocomplete="off" placeholder="${same('m')?'':'（複数の機種）'}"`);
+  if(m)h+=`<div class="f" style="margin-bottom:2px"><span>「${esc(m)}」の色</span></div><div class="sws">${SW.map(c=>`<button data-col="${c}" style="background:${c}" aria-pressed="${c===col}" aria-label="色 ${c}"></button>`).join('')}<input type="color" data-k="mcol" value="${col}" title="ほかの色"></div>`;
+  h+=`<div class="f" style="margin-bottom:2px"><span>印</span></div><div class="marks">${[['','なし'],['●','●'],['▲','▲'],['✕','✕']].map(([v,t])=>`<button data-mark="${v}" aria-pressed="${mk===v}">${t}</button>`).join('')}</div>`;
+  h+=`<label class="f"><span>メモ（図には出ません）</span><textarea data-k="ct" placeholder="${same('t')?'':'（台ごとに違うメモ）'}">${esc(same('t')?c0.t:'')}</textarea></label>`;
+  if(!one){
+    const both=new Set(ui.csel.map(r=>r.k.split(':')[1])).size>1;
+    h+=`<details open><summary>連番を振る</summary><div><div class="mini"><label>開始番号<input data-u="start" value="${esc(ui.num.start)}" inputmode="numeric"></label><label>増減<select data-u="step">${opt(1,'＋1',ui.num.step)}${opt(-1,'−1',ui.num.step)}</select></label><label>使わない数字<input data-p="skip" value="${esc(P.skip)}" title="例：49 と入れると 4 と 9 を含む番号を飛ばします"></label></div>`+
+      `<label class="chk"><input type="checkbox" data-p="skipMode" ${P.skipMode==='last'?'checked':''}>下1桁だけで判定する</label>`+
+      (both?`<label class="chk"><input type="checkbox" data-u="loop" ${ui.num.loop?'checked':''}>両面は折り返す（A面の端からB面を戻る）</label>`:'')+
+      `<label class="chk"><input type="checkbox" data-u="rev" ${ui.num.rev?'checked':''}>逆向きに振る</label><button class="btn pri" data-act="number">連番を振る</button></div></details>`;
+  }
+  h+=`<div class="btns" style="margin-top:8px"><button class="btn" data-act="bulk">まとめて入力…</button><button class="btn" data-act="selisl">島の全台を選ぶ</button><button class="btn danger" data-act="clear">台情報を消す</button></div>`;
+  if(!one){const mx=Math.min(n,120);
+    h+=`<table class="ct"><tr><th></th><th>台番号</th><th>機種名</th></tr>${list.slice(0,mx).map((c,i)=>`<tr><td>${i+1}</td><td><input data-tr="${i}" data-tk="n" value="${esc(c.n)}" autocomplete="off"></td><td><input data-tr="${i}" data-tk="m" value="${esc(c.m)}" list="mdl" autocomplete="off"></td></tr>`).join('')}</table>`+(n>mx?`<p class="hint">表は先頭の${mx}台まで表示しています。</p>`:'<p class="hint">表のセルに、Excelからコピーした列をそのまま貼り付けられます。</p>');}
+  return h;
+}
+function setField(k,v,final,el){
+  const o=byId(ui.sel[0]);if(!o)return;const n=parseFloat(v);let re=false;
+  if(k.startsWith('s.')){const [,i,f]=k.split('.'),s=o.segs[+i];if(f==='turn')s.turn=v;else if(f==='n'){if(!final||isNaN(n))return;s.n=n}else{if(isNaN(n))return;s[f]=n}fixIsland(o)}
+  else if(['x','y','rot','depth','w','h','rx','fs','round'].includes(k)){if(isNaN(n))return;o[k]=['w','h','fs'].includes(k)?Math.max(4,n):n;if(o.t==='island')fixIsland(o)}
+  else if(k==='sides'){o.sides=+v;fixIsland(o);re=true}
+  else if(k==='vert')o.vert=v==='1';
+  else if(k==='style'){o.style=v;re=true}
+  else if(k==='fill'){o.fill=v;re=final}
+  else o[k]=v;
+  if(k==='style')drawAll();else drawObj(o);drawOver();
+  if(final){commit();if(re)renderPanel()}
+}
+const R$=$('#right');
+function onField(e){
+  const el=e.target,final=e.type==='change';
+  if(el.dataset.k){const k=el.dataset.k;
+    if(ui.mode==='layout')setField(k,el.value,final,el);
+    else if(k==='cn'||k==='cm'||k==='ct'){const f=k[1];if(!final)setCells(c=>{c[f]=f==='t'?el.value:el.value.trim()});else{commit();renderLeft();if(k==='cm')renderPanel()}}
+    else if(k==='mcol'){const m=getCell(byId(ui.csel[0].o),ui.csel[0].k).m;setModelColor(m,el.value,final)}
+  }else if(el.dataset.tr!=null){const r=ui.csel[+el.dataset.tr],o=byId(r.o),c=getCell(o,r.k);if(!final){c[el.dataset.tk]=el.value.trim();drawObj(o)}else{commit();renderLeft()}}
+  else if(el.dataset.u){ui.num[el.dataset.u]=el.type==='checkbox'?el.checked:el.value}
+  else if(el.dataset.p){if(el.dataset.p==='skipMode')P.skipMode=el.checked?'last':'any';else P.skip=el.value;if(final)commit()}
+}
+R$.addEventListener('input',onField);R$.addEventListener('change',onField);
+function setModelColor(m,col,final){if(!m)return;if(col.toUpperCase()==='#FFFFFF')delete P.models[m];else P.models[m]=col.toUpperCase();drawAll();if(final){commit();renderLeft();renderPanel()}}
+R$.addEventListener('keydown',e=>{
+  const el=e.target,k=el.dataset.k;
+  if((k==='cn'||k==='cm')&&ui.csel.length===1){
+    if(e.key==='Enter'&&!e.isComposing){e.preventDefault();el.blur();advance(e.shiftKey?-1:1,k)}
+    else if(/^Arrow/.test(e.key)&&(e.altKey||(k==='cn'&&(e.key==='ArrowUp'||e.key==='ArrowDown')))){e.preventDefault();el.blur();const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];navCell(d[0],d[1],k)}
+  }else if(k==='cm'&&e.key==='Enter'&&!e.isComposing){el.blur()}
+  else if(el.dataset.tr!=null&&e.key==='Enter'&&!e.isComposing){e.preventDefault();const nx=R$.querySelector(`[data-tr="${+el.dataset.tr+(e.shiftKey?-1:1)}"][data-tk="${el.dataset.tk}"]`);if(nx){nx.focus();nx.select()}else el.blur()}
+  else if(el.tagName==='INPUT'&&e.key==='Enter'&&ui.mode==='layout')el.blur();
+});
+R$.addEventListener('paste',e=>{
+  const el=e.target;if(el.dataset.tr==null)return;const text=(e.clipboardData||window.clipboardData).getData('text');
+  if(!/[\n\t]/.test(text.trim()))return;e.preventDefault();
+  const lines=text.replace(/\r/g,'').split('\n');if(lines[lines.length-1]==='')lines.pop();const i0=+el.dataset.tr,objs=new Set();
+  lines.forEach((ln,j)=>{const r=ui.csel[i0+j];if(!r)return;const o=byId(r.o),c=getCell(o,r.k),cols=ln.split('\t');
+    if(el.dataset.tk==='n'){c.n=cols[0].trim();if(cols[1]!=null)c.m=cols[1].trim()}else c.m=cols[0].trim();objs.add(o)});
+  objs.forEach(drawObj);applyCellSel();commit();renderLeft();renderPanel();toast(lines.length+'行を貼り付けました');
+});
+R$.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.col){const m=getCell(byId(ui.csel[0].o),ui.csel[0].k).m;setModelColor(m,b.dataset.col,true);return}
+  if(b.dataset.icon!=null){const o=byId(ui.sel[0]),k=b.dataset.icon,names=Object.values(MARK).map(m=>m.n);
+    if(MARK[k]){if(!o.label||o.label==='部屋'||names.includes(o.label))o.label=MARK[k].n;o.icon=k}else{delete o.icon;if(names.includes(o.label))o.label='部屋'}
+    drawObj(o);drawOver();commit();renderPanel();return}
+  if(b.dataset.mark!=null){setCells(c=>{c.k=b.dataset.mark},true);renderPanel();return}
+  const a=b.dataset.act;if(!a)return;const o=byId(ui.sel[0]);
+  if(a==='dup')duplicateSel();
+  else if(a==='del')deleteSel();
+  else if(a.startsWith('al-'))alignSel(a.slice(3));
+  else if(a==='nofill'){delete o.fill;drawObj(o);commit();renderPanel()}
+  else if(a==='r90'||a==='r-90'){const bb=bbOf([o]);rotObj(o,a==='r90'?90:-90,(bb.x0+bb.x1)/2,(bb.y0+bb.y1)/2);const rp=refPt(o);moveObj(o,sn(rp[0])-rp[0],sn(rp[1])-rp[1]);drawObj(o);drawOver();commit();renderPanel()}
+  else if(a==='flip'){const ge=geom(o);o.x=f2(ge.ex);o.y=f2(ge.ey);o.rot=f2((((ge.eth/D2R+180)%360)+360)%360);o.segs.reverse();
+    o.segs.forEach(s=>{if(s.k==='a')s.turn=s.turn==='R'?'L':'R';const a2=s.a.reverse(),b2=s.b.reverse();if(o.sides===2){s.a=b2;s.b=a2}});drawObj(o);drawOver();commit();renderPanel()}
+  else if(a==='addl'||a==='adda'){const last=o.segs[o.segs.length-1],p=o.segs.find(s=>s.k==='l');
+    o.segs.push(a==='addl'?L(5,p?p.p:24):A(4,Math.max(last.k==='a'?last.r:0,(o.sides===2?o.depth:o.depth/2)+40),90,last.k==='a'?last.turn:'R'));fixIsland(o);drawObj(o);drawOver();commit();renderPanel()}
+  else if(a==='segdel'){if(o.segs.length>1){o.segs.splice(+b.dataset.i,1);drawObj(o);drawOver();commit();renderPanel()}}
+  else if(a==='tocells'){ui.csel=cellSeq(o).map(k=>({o:o.id,k}));ui.anchor=ui.csel[0]||null;setMode('cells')}
+  else if(a==='array'){const n=Math.max(1,Math.min(40,+$('#arrN').value||1)),d=+$('#arrD').value||108,v=$('#arrDir').value==='v',ids=[o.id];
+    for(let i=1;i<=n;i++){const c=blankCopy(o);moveObj(c,v?0:d*i,v?d*i:0);floor().objs.push(c);ids.push(c.id)}ui.sel=ids;commit();drawAll();renderPanel();toast(n+'個増やしました')}
+  else if(a==='number')numberSel();
+  else if(a==='bulk')openBulk();
+  else if(a==='selisl'){const ids=[...new Set(ui.csel.map(r=>r.o))];ui.csel=ids.flatMap(id=>cellSeq(byId(id)).map(k=>({o:id,k})));selChanged()}
+  else if(a==='clear'){setCells(c=>{c.n='';c.m='';c.k='';c.t=''},true);renderPanel()}
+});
+
+/* ---------- まとめて入力 ---------- */
+function openBulk(){
+  const both=new Set(ui.csel.map(r=>r.k.split(':')[1])).size>1;$('#bkLoop').checked=both&&ui.num.loop;$('#bkLoop').parentNode.hidden=!both;
+  const list=orderedSel($('#bkLoop').checked,false);
+  $('#bkInfo').textContent=`選択中の${list.length}台に、並び順で入ります。空のままにした欄は変更しません。`;
+  $('#bkNums').value=list.every(i=>!i.c.n)?'':list.map(i=>i.c.n).join(' ');
+  const runs=[];list.forEach(i=>{const l=runs[runs.length-1];if(l&&l[0]===i.c.m)l[1]++;else runs.push([i.c.m,1])});
+  $('#bkModels').value=list.every(i=>!i.c.m)?'':runs.map(([m,c])=>(m||'（なし）')+' '+c).join('\n');
+  $('#dBulk').showModal();
+}
+$('#bkGo').onclick=()=>{
+  const list=orderedSel($('#bkLoop').checked,false),nt=$('#bkNums').value,mt=$('#bkModels').value;let cnt=0;
+  if(nt.trim()){
+    if(/\t/.test(nt)){nt.replace(/\r/g,'').split('\n').filter(l=>l.trim()).forEach((ln,i)=>{const it=list[i];if(!it)return;const c=ln.split('\t');it.c.n=c[0].trim();if(c[1]!=null&&c[1].trim())it.c.m=c[1].trim();cnt++})}
+    else nt.split(/[\s,、]+/).filter(Boolean).forEach((v,i)=>{if(list[i]){list[i].c.n=v;cnt++}});
+  }
+  if(mt.trim()){let i=0;mt.replace(/\r/g,'').split('\n').forEach(ln=>{ln=ln.trim();if(!ln)return;const mm=ln.match(/^(.*?)[\s,、\t×xX*＊]+(\d+)$/);let name=mm?mm[1].trim():ln,c=mm?+mm[2]:1;if(name==='（なし）')name='';
+    for(let k=0;k<c&&i<list.length;k++,i++)list[i].c.m=name});cnt=Math.max(cnt,i)}
+  $('#dBulk').close();afterCellEdit(list,true);toast(cnt+'台に入力しました');
+};
+
+/* ---------- キャンバス操作 ---------- */
+let dr=null,spaceDown=false;
+const wpt=e=>{const r=cv.getBoundingClientRect();return [(e.clientX-r.left-V.tx)/V.s,(e.clientY-r.top-V.ty)/V.s]};
+const snapSel=()=>Object.fromEntries(ui.sel.map(id=>[id,clone(byId(id))]));
+const restore=(id,orig)=>{const o=byId(id);for(const k in o)delete o[k];Object.assign(o,clone(orig[id]));return o};
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{
+  if(dr)return;
+  const ae=document.activeElement;if(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName))ae.blur();
+  const p=wpt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}
+  const pan=(clear,pick)=>{dr={type:'pan',sx:e.clientX,sy:e.clientY,tx:V.tx,ty:V.ty,moved:false,clear,pick};cv.classList.add('panning')};
+  if(e.button===1||e.button===2||spaceDown){pan(false);return}
+  if(e.button!==0)return;
+  const h=e.target.closest('[data-h]'),oe=e.target.closest('[data-o]'),ce=e.target.closest('.m');
+  if(ui.mode==='layout'){
+    if(h){startHandle(h.dataset.h,e,p);return}
+    if(oe){const id=oe.dataset.o,o=byId(id);
+      if(isFloorish(o)&&!ui.sel.includes(id)&&!e.shiftKey){pan(true,id);return}
+      if(e.shiftKey){ui.sel=ui.sel.includes(id)?ui.sel.filter(x=>x!==id):[...ui.sel,id];selChanged();return}
+      if(!ui.sel.includes(id)){ui.sel=[id];selChanged()}
+      dr={type:'move',p0:p,pid:id,orig:snapSel(),moved:false};return}
+    if(e.shiftKey){dr={type:'marq',p0:p,p1:p};return}
+    pan(true);
+  }else{
+    if(ce){const id=ce.closest('[data-o]').dataset.o,ref={o:id,k:ce.dataset.c};
+      if(e.shiftKey&&ui.anchor&&ui.anchor.o===id)ui.csel=rangeRefs(ui.anchor,ref);
+      else if(e.ctrlKey||e.metaKey){const i=ui.csel.findIndex(r=>r.o===id&&r.k===ref.k);if(i>=0)ui.csel.splice(i,1);else ui.csel.push(ref);ui.anchor=ref}
+      else{ui.csel=[ref];ui.anchor=ref}
+      applyCellSel();dr={type:'paint',start:ui.anchor,base:e.ctrlKey||e.metaKey?ui.csel.slice():null};return}
+    if(e.shiftKey){dr={type:'marq',p0:p,p1:p};return}
+    pan(true);
+  }
+});
+function startHandle(k,e,p){
+  const orig=snapSel(),o=byId(ui.sel[0]);
+  if(k==='rot'){const bb=bbOf(selObjs()),c=[(bb.x0+bb.x1)/2,(bb.y0+bb.y1)/2];dr={type:'rot',orig,c,a0:Math.atan2(p[1]-c[1],p[0]-c[0]),moved:false}}
+  else if(k==='end')dr={type:'end',orig,moved:false};
+  else if(k[0]==='c'){const i=+k.slice(1);dr={type:'corner',orig,fixed:objPts(o)[(i+2)%4],moved:false}}
+  else if(k[0]==='v'){const i=+k.slice(2);if(e.altKey){if(o.pts.length>3){o.pts.splice(i,1);drawObj(o);drawOver();commit()}return}dr={type:'vert',orig,i,moved:false}}
+  else if(k[0]==='m'){const i=+k.slice(2),a=o.pts[i],b=o.pts[(i+1)%o.pts.length];o.pts.splice(i+1,0,[f2((a[0]+b[0])/2),f2((a[1]+b[1])/2)]);dr={type:'vert',orig,i:i+1,moved:true,keep:true};drawObj(o);drawOver()}
+}
+cv.addEventListener('pointermove',e=>{
+  if(!dr)return;const p=wpt(e),d=dr;
+  if(d.type==='pan'){const dx=e.clientX-d.sx,dy=e.clientY-d.sy;if(!d.moved&&Math.abs(dx)+Math.abs(dy)<4)return;d.moved=true;V.tx=d.tx+dx;V.ty=d.ty+dy;applyView()}
+  else if(d.type==='move'){const dx=p[0]-d.p0[0],dy=p[1]-d.p0[1];if(!d.moved&&Math.hypot(dx,dy)*V.s<4)return;d.moved=true;
+    const rp=refPt(d.orig[d.pid]),ddx=sn(rp[0]+dx,e)-rp[0],ddy=sn(rp[1]+dy,e)-rp[1];
+    for(const id of ui.sel){const o=restore(id,d.orig);moveObj(o,ddx,ddy);drawObj(o)}drawOver()}
+  else if(d.type==='rot'){let a=(Math.atan2(p[1]-d.c[1],p[0]-d.c[0])-d.a0)/D2R;if(!e.altKey)a=Math.round(a/15)*15;d.moved=true;
+    for(const id of ui.sel){const o=restore(id,d.orig);rotObj(o,a,d.c[0],d.c[1]);drawObj(o)}drawOver()}
+  else if(d.type==='end'){const id=ui.sel[0],o=restore(id,d.orig),ge=geom(o),g=ge.G[ge.G.length-1],s=g.s;d.moved=true;
+    if(g.k==='l'){const u=(p[0]-g.x0)*Math.cos(g.th0)+(p[1]-g.y0)*Math.sin(g.th0);s.n=Math.max(o.segs.length>1?0:1,Math.round(u/s.p))}
+    else{const a0=Math.atan2(g.y0-g.cy,g.x0-g.cx),a1=Math.atan2(p[1]-g.cy,p[0]-g.cx);let a=(a1-a0)*g.sg;a=((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI);if(a>Math.PI*1.9&&s.ang<200)a=0;a/=D2R;
+      if(s.n>0){const da=s.ang/s.n;let n=Math.max(1,Math.round(a/da));n=Math.min(n,Math.floor(360/da+1e-6));s.ang=da*n;s.n=n}else s.ang=Math.max(15,Math.round(a/15)*15)}
+    fixIsland(o);drawObj(o);drawOver()}
+  else if(d.type==='corner'){const o=restore(ui.sel[0],d.orig),q=[sn(p[0],e),sn(p[1],e)],f=d.fixed,r=-o.rot*D2R,dx=q[0]-f[0],dy=q[1]-f[1];d.moved=true;
+    o.x=f2((q[0]+f[0])/2);o.y=f2((q[1]+f[1])/2);o.w=Math.max(6,f2(Math.abs(dx*Math.cos(r)-dy*Math.sin(r))));o.h=Math.max(6,f2(Math.abs(dx*Math.sin(r)+dy*Math.cos(r))));drawObj(o);drawOver()}
+  else if(d.type==='vert'){const o=byId(ui.sel[0]);o.pts[d.i]=[sn(p[0],e),sn(p[1],e)];d.moved=true;drawObj(o);drawOver()}
+  else if(d.type==='marq'){d.p1=p;drawOver()}
+  else if(d.type==='paint'){const el=document.elementFromPoint(e.clientX,e.clientY),ce=el&&el.closest&&el.closest('.m');if(!ce)return;
+    const id=ce.closest('[data-o]').dataset.o,ref={o:id,k:ce.dataset.c};let rs=id===d.start.o?rangeRefs(d.start,ref):[d.start,ref];
+    if(d.base){rs=d.base.concat(rs.filter(r=>!d.base.some(b=>b.o===r.o&&b.k===r.k)))}
+    else if(id!==d.start.o){rs=ui.csel.concat(rs.filter(r=>!ui.csel.some(b=>b.o===r.o&&b.k===r.k)))}
+    ui.csel=rs;applyCellSel()}
+});
+function endDrag(){
+  if(!dr)return;const d=dr;dr=null;cv.classList.remove('panning');
+  if(d.type==='pan'){if(!d.moved&&d.clear){if(ui.mode==='layout')ui.sel=d.pick?[d.pick]:[];else ui.csel=[];selChanged()}}
+  else if(d.type==='marq'){const x0=Math.min(d.p0[0],d.p1[0]),x1=Math.max(d.p0[0],d.p1[0]),y0=Math.min(d.p0[1],d.p1[1]),y1=Math.max(d.p0[1],d.p1[1]);
+    if(ui.mode==='layout')ui.sel=floor().objs.filter(o=>{if(isFloorish(o))return false;const b=bbOf([o]);return b.x0<x1&&b.x1>x0&&b.y0<y1&&b.y1>y0}).map(o=>o.id);
+    else{const rs=[];floor().objs.forEach(o=>{if(o.t==='island')eachCell(o,geom(o),q=>{if(q.cx>x0&&q.cx<x1&&q.cy>y0&&q.cy<y1)rs.push({o:o.id,k:q.si+':'+q.side+':'+q.i})})});ui.csel=rs;ui.anchor=rs[0]||null}
+    selChanged()}
+  else if(d.type==='paint'){renderPanel();if(ui.csel.length===1)focusCell('cn')}
+  else if(d.moved){commit();renderPanel()}
+  drawOver();
+}
+cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*(e.ctrlKey?.01:.0016)),e.clientX-r.left,e.clientY-r.top)},{passive:false});
+cv.addEventListener('dblclick',e=>{
+  const el=document.elementFromPoint(e.clientX,e.clientY);if(!el||!el.closest)return;const oe=el.closest('[data-o]'),ce=el.closest('.m');
+  if(ui.mode==='layout'&&ce){ui.csel=[{o:oe.dataset.o,k:ce.dataset.c}];ui.anchor=ui.csel[0];setMode('cells');focusCell('cn')}
+  else if(ui.mode==='layout'&&oe){const i=$('#right [data-k="text"]')||$('#right [data-k="label"]');if(i){i.focus();i.select()}}
+});
+addEventListener('keyup',e=>{if(e.key===' ')spaceDown=false});
+addEventListener('keydown',e=>{
+  const ae=document.activeElement,inField=ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName),mod=e.ctrlKey||e.metaKey,key=(e.key||'').toLowerCase();
+  if(mod&&key==='s'){e.preventDefault();saveFile();return}
+  if(document.querySelector('dialog[open]'))return;
+  if(inField){if(e.key==='Escape')ae.blur();return}
+  if(e.key===' '){spaceDown=true;e.preventDefault();return}
+  if(mod&&key==='z'){e.preventDefault();timeTravel(e.shiftKey?1:-1);return}
+  if(mod&&key==='y'){e.preventDefault();timeTravel(1);return}
+  const arrow={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];
+  if(ui.mode==='layout'){
+    if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();deleteSel()}
+    else if(e.key==='Escape'){ui.sel=[];selChanged()}
+    else if(mod&&key==='d'){e.preventDefault();duplicateSel()}
+    else if(mod&&key==='c')copySel();
+    else if(mod&&key==='v')pasteClip();
+    else if(mod&&key==='a'){e.preventDefault();ui.sel=floor().objs.filter(o=>!isFloorish(o)).map(o=>o.id);selChanged()}
+    else if(arrow&&ui.sel.length){e.preventDefault();const st=(e.shiftKey?4:1)*(ui.snap?ui.grid:1);selObjs().forEach(o=>{moveObj(o,arrow[0]*st,arrow[1]*st);drawObj(o)});drawOver();commit();renderPanel()}
+  }else{
+    if(e.key==='Delete'||e.key==='Backspace'){if(ui.csel.length){e.preventDefault();setCells(c=>{c.n='';c.m='';c.k='';c.t=''},true);renderPanel()}}
+    else if(e.key==='Escape'){ui.csel=[];selChanged()}
+    else if(mod&&key==='a'){e.preventDefault();const ids=ui.csel.length?[...new Set(ui.csel.map(r=>r.o))]:floor().objs.filter(o=>o.t==='island').map(o=>o.id);ui.csel=ids.flatMap(id=>cellSeq(byId(id)).map(k=>({o:id,k})));selChanged()}
+    else if(arrow&&ui.csel.length){e.preventDefault();navCell(arrow[0],arrow[1])}
+    else if(e.key==='Enter'&&ui.csel.length===1){e.preventDefault();focusCell('cn')}
+    else if(/^[0-9]$/.test(e.key)&&ui.csel.length===1&&!mod){focusCell('cn')}
+  }
+});
+
+/* ---------- フロア ---------- */
+function renderTabs(){$('#tabs').innerHTML=P.floors.map((f,i)=>`<button class="tab${i===ui.floor?' on':''}" data-fi="${i}">${esc(f.name)}</button>`).join('');$('#fDel').disabled=P.floors.length<2;$('#fL').disabled=ui.floor===0;$('#fR').disabled=ui.floor===P.floors.length-1}
+function goFloor(i){ui.floor=i;ui.sel=[];ui.csel=[];refresh(true)}
+$('#tabs').addEventListener('click',e=>{const t=e.target.closest('.tab');if(t&&e.target.tagName!=='INPUT'&&+t.dataset.fi!==ui.floor)goFloor(+t.dataset.fi)});
+$('#tabs').addEventListener('dblclick',e=>{if(e.target.closest('.tab'))renameFloor()});
+function renameFloor(){
+  const t=$('#tabs .tab.on');if(!t||t.querySelector('input'))return;t.innerHTML=`<input value="${esc(floor().name)}" aria-label="フロア名">`;const i=t.firstChild;i.focus();i.select();
+  const done=()=>{floor().name=i.value.trim()||floor().name;commit();renderTabs()};i.onblur=done;i.onkeydown=e=>{if(e.key==='Enter'||e.key==='Escape')i.blur();e.stopPropagation()};
+}
+$('#fRen').onclick=renameFloor;
+$('#fAdd').onclick=()=>{P.floors.push({id:nid(),name:(P.floors.length+1)+'F',objs:[]});commit();goFloor(P.floors.length-1)};
+$('#fDup').onclick=()=>{const c=clone(floor());c.id=nid();c.name+=' のコピー';c.objs.forEach(o=>o.id=nid());P.floors.splice(ui.floor+1,0,c);commit();goFloor(ui.floor+1)};
+$('#fDel').onclick=()=>{if(P.floors.length<2)return;const name=floor().name;P.floors.splice(ui.floor,1);commit();goFloor(Math.max(0,ui.floor-1));toast(`「${name}」を削除しました（元に戻すで復元できます）`)};
+const moveFloor=d=>{const i=ui.floor,j=i+d;if(j<0||j>=P.floors.length)return;[P.floors[i],P.floors[j]]=[P.floors[j],P.floors[i]];ui.floor=j;commit();renderTabs()};
+$('#fL').onclick=()=>moveFloor(-1);$('#fR').onclick=()=>moveFloor(1);
+
+/* ---------- 画像の書き出し ---------- */
+function buildSVG(floors,o){
+  const m=24,gap=40,tH=o.title?44:0;let x=0,H=0;const parts=[];
+  for(const f of floors){const bb=bbOf(f.objs)||{x0:0,y0:0,x1:320,y1:200},w=bb.x1-bb.x0+m*2,h=bb.y1-bb.y0+m*2+tH;parts.push({f,bb,x,w});x+=w+gap;H=Math.max(H,h)}
+  const W=x-gap;let sc=+o.scale||1;const lim=Math.min(16000/W,16000/H,Math.sqrt(1.6e8/(W*H)));if(sc>lim)sc=Math.max(.25,Math.floor(lim*4)/4);
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(W*sc)}" height="${Math.round(H*sc)}" viewBox="0 0 ${f2(W)} ${f2(H)}" font-family="${FONT}">`;
+  if(o.bg)s+=`<rect width="${f2(W)}" height="${f2(H)}" fill="${o.bg}"/>`;
+  for(const p of parts){
+    if(o.title)s+=`<text x="${f2(p.x+m)}" y="30" font-size="20" font-weight="700" fill="${TH.ink}">${esc(P.name)}　${esc(p.f.name)}</text>`;
+    s+=`<g transform="translate(${f2(p.x+m-p.bb.x0)} ${f2(tH+m-p.bb.y0)})">${sorted(p.f).map(ob=>objSVG(ob,o.mode,o.marks)).join('')}</g>`;
+  }
+  return {svg:s+'</svg>',w:Math.round(W*sc),h:Math.round(H*sc),sc};
+}
+const exOpts=()=>({scope:$('#exScope').value,mode:$('#exMode').value,scale:+$('#exScale').value,fmt:$('#exFmt').value,bg:$('#exFmt').value==='jpg'?($('#exBg').value||'#FFFFFF'):$('#exBg').value,title:$('#exTitle').checked,marks:$('#exMarks').checked});
+const svgURL=svg=>'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+function exPreview(){
+  const o=exOpts(),fl=o.scope==='all1'?P.floors:[floor()],r=buildSVG(fl,o);$('#exImg').src=svgURL(r.svg);
+  $('#exInfo').textContent=(o.scope==='each'?`${P.floors.length}枚の画像を書き出します。プレビューは表示中のフロアです。`:`${r.w} × ${r.h} ピクセル`)+(r.sc<o.scale?'（大きすぎるため縮小しています）':'');
+}
+async function svgToBlob(r,fmt){
+  const img=new Image();img.src=svgURL(r.svg);await img.decode();
+  const c=document.createElement('canvas');c.width=r.w;c.height=r.h;c.getContext('2d').drawImage(img,0,0,r.w,r.h);
+  return new Promise(res=>c.toBlob(res,fmt==='jpg'?'image/jpeg':'image/png',.92));
+}
+async function doExport(){
+  const o=exOpts(),sets=o.scope==='each'?P.floors.map(f=>[f]):[o.scope==='all1'?P.floors:[floor()]];
+  $('#exGo').disabled=true;
+  try{
+    for(const fl of sets){const r=buildSVG(fl,o),name=safeName(P.name+(fl.length===1?'_'+fl[0].name:'_全フロア'))+'.'+o.fmt;
+      const blob=o.fmt==='svg'?new Blob([r.svg],{type:'image/svg+xml'}):await svgToBlob(r,o.fmt);
+      if(!blob)throw new Error('toBlob');download(blob,name);if(sets.length>1)await new Promise(r=>setTimeout(r,350))}
+    $('#dExport').close();toast(sets.length>1?sets.length+'枚の画像を書き出しました（ダウンロードフォルダ）':'画像を書き出しました（ダウンロードフォルダ）');
+  }catch(e){toast('書き出せませんでした。「大きさ」を小さくして、もう一度試してください')}
+  $('#exGo').disabled=false;
+}
+$('#bExport').onclick=()=>{$('#dExport').showModal();exPreview()};
+$('#dExport').addEventListener('change',exPreview);
+$('#exGo').onclick=doExport;
+
+/* ---------- サンプル（架空のホール ＋ 形の見本） ---------- */
+function buildSample(){
+  const p=newProject();p.name='サンプルホール';const F=p.floors[0];const id=()=>'o'+(p.nid++);
+  // 台番号は 4 と 9 を飛ばして連番、機種は [名前,台数] の並びで割り当てる（すべて架空）
+  const mk=(n0,groups)=>{const out=[];let n=n0;for(const [m,c] of groups)for(let i=0;i<c;i++){while(/[49]/.test(String(n)))n++;out.push({n:String(n++),m,k:'',t:''})}return out};
+  const isl=(x,y,rot,depth,sides,segs)=>F.objs.push(fixIsland({id:id(),t:'island',name:'',x,y,rot,depth,sides,segs}));
+  const room=(x,y,w,h,label,fs,icon,style='room')=>F.objs.push({id:id(),t:'rect',x:x+w/2,y:y+h/2,w,h,rot:0,rx:14,style,label,fs,icon:icon||''});
+  const T=(text,x,y,fs,vert,tone='dim')=>F.objs.push({id:id(),t:'text',x,y,text,fs,vert,rot:0,tone});
+  F.objs.push({id:id(),t:'poly',style:'floor',label:'',fs:16,round:14,pts:[[0,0],[780,0],[780,900],[0,900]]});
+  room(20,20,110,110,'女子トイレ',14,'women');room(140,20,110,110,'男子トイレ',14,'men');room(20,150,90,130,'喫煙所',16,'smoke');
+  room(300,320,230,70,'カウンター',20);
+  room(600,484,36,336,'',16,'','block');room(684,484,36,336,'',16,'','block');
+  // 壁際の片面島と、背中合わせの両面島（A面を上り、B面を折り返して振る）
+  isl(42,820,-90,36,1,[{k:'l',n:14,p:24,a:mk(101,[['沖スロA',8],['沖スロB',6]]),b:[]}]);
+  const dbl=(x,n0,ga,gb)=>{const a=mk(n0,ga),b=mk(+a[a.length-1].n+1,gb).reverse();isl(x,820,-90,36,2,[{k:'l',n:14,p:24,a,b}])};
+  dbl(150,201,[['ノーマルA',14]],[['ノーマルA',6],['ノーマルB',8]]);
+  dbl(270,301,[['ノーマルC',7],['スマスロA',7]],[['スマスロB',14]]);
+  dbl(390,501,[['スマスロC',10],['スマスロD',4]],[['スマスロE',5],['スマスロF',5],['スマスロG',4]]);
+  dbl(510,601,[['スマスロH',14]],[['バラエティA',1],['バラエティB',1],['バラエティC',1],['バラエティD',1],['スマスロJ',10]]);
+  // 直線＋円弧＋直線の島と、円卓
+  const c1=mk(701,[['スマスロK',12],['スマスロL',4],['スマスロM',6]]);
+  isl(300,50,0,30,1,[{k:'l',n:12,p:20,a:c1.slice(0,12),b:[]},{k:'a',n:4,r:100,ang:90,turn:'R',a:c1.slice(12,16),b:[]},{k:'l',n:6,p:22,a:c1.slice(16),b:[]}]);
+  isl(180,344,0,30,1,[{k:'a',n:8,r:46,ang:360,turn:'R',a:mk(801,[['円卓コーナー',8]]),b:[]}]);
+  [['スロット①',88],['スロット②',210],['スロット③',330],['スロット④',450],['スロット⑤',570]].forEach(([t,x])=>T(t,x,652,12,true));
+  T('パチンコ',660,652,20,true);T('中央通路',400,440,13,false);
+  'ノーマルA ノーマルB ノーマルC'.split(' ').forEach(m=>p.models[m]='#FFE08B');
+  '沖スロA 沖スロB'.split(' ').forEach(m=>p.models[m]='#FFDBCB');
+  p.models['スマスロB']='#D6E3FF';p.models['スマスロH']='#D6E3FF';p.models['スマスロK']='#C9EBCF';
+  // 2枚目：形の見本
+  const G={id:id(),name:'形の見本',objs:[]};p.floors.push(G);
+  const ctr=n0=>{let n=n0;return (c,m)=>{const out=[];while(out.length<c){if(!/[49]/.test(String(n)))out.push({n:String(n),m,k:'',t:''});n++}return out}};
+  const gi=(x,y,rot,depth,sides,segs)=>G.objs.push(fixIsland({id:id(),t:'island',name:'',x,y,rot,depth,sides,segs}));
+  G.objs.push({id:id(),t:'poly',style:'floor',label:'',fs:16,round:16,pts:[[0,0],[900,0],[900,640],[0,640]]});
+  let c=ctr(2001);gi(214,150,0,30,1,[{k:'a',n:8,r:46,ang:360,turn:'R',a:c(8,'円卓'),b:[]}]);
+  c=ctr(2101);gi(72,350,0,36,2,[{k:'l',n:6,p:24,a:c(6,'両面'),b:c(6,'両面').reverse()}]);
+  c=ctr(2201);gi(72,520,0,36,1,[{k:'l',n:6,p:24,a:c(6,'片面'),b:[]}]);
+  c=ctr(2301);gi(330,500,-90,36,1,[{k:'l',n:5,p:24,a:c(5,'U字'),b:[]},{k:'a',n:6,r:66,ang:180,turn:'R',a:c(6,'U字'),b:[]},{k:'l',n:5,p:24,a:c(5,'U字'),b:[]}]);
+  c=ctr(2501);gi(610,570,-90,36,1,[{k:'a',n:5,r:110,ang:75,turn:'R',a:c(5,'S字'),b:[]},{k:'a',n:5,r:110,ang:75,turn:'L',a:c(5,'S字'),b:[]}]);
+  c=ctr(2601);const la=[c(4,'L字'),c(3,'L字'),c(4,'L字')],lb=c(11,'L字').reverse();
+  gi(590,90,0,36,2,[{k:'l',n:4,p:24,a:la[0],b:lb.slice(0,4)},{k:'a',n:3,r:84,ang:90,turn:'R',a:la[1],b:lb.slice(4,7)},{k:'l',n:4,p:24,a:la[2],b:lb.slice(7)}]);
+  const GT=(text,x,y)=>G.objs.push({id:id(),t:'text',x,y,text,fs:13,vert:false,rot:0,tone:'normal'});
+  GT('円卓',214,108);GT('直線（両面）',144,294);GT('直線（片面）',144,482);GT('U字（直線＋円弧＋直線）',396,540);GT('S字（円弧＋円弧）',700,606);GT('L字（両面）',700,36);
+  Object.assign(p.models,{'円卓':'#C9EBCF','U字':'#E9DDFF','S字':'#B9ECF0','L字':'#FFD9E3','両面':'#FFE08B'});
+  return p;
+}
+
+/* ---------- 起動 ---------- */
+$('#modeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.mode)});
+$('#viewSel').onchange=e=>{ui.view=e.target.value;applyView()};
+$('#snapChk').onchange=e=>{ui.snap=e.target.checked};
+$('#pname').onchange=e=>{P.name=e.target.value.trim()||'島図';e.target.value=P.name;commit()};
+$('#pname').onkeydown=e=>{if(e.key==='Enter')e.target.blur()};
+$('#bUndo').onclick=()=>timeTravel(-1);$('#bRedo').onclick=()=>timeTravel(1);
+$('#bSave').onclick=saveFile;$('#bOpen').onclick=openFile;
+$('#bNew').onclick=()=>{$('#welWarn').hidden=false;$('#dWelcome').showModal()};
+$('#bHelp').onclick=()=>$('#dHelp').showModal();
+$('#zIn').onclick=()=>{const r=stage.getBoundingClientRect();zoomAt(1.25,r.width/2,r.height/2)};
+$('#zOut').onclick=()=>{const r=stage.getBoundingClientRect();zoomAt(.8,r.width/2,r.height/2)};
+$('#zFit').onclick=()=>fitView();
+document.addEventListener('click',e=>{const c=e.target.closest('[data-close]');if(c)c.closest('dialog').close()});
+$('#dWelcome').addEventListener('click',e=>{const b=e.target.closest('[data-w]');if(!b)return;
+  if(b.dataset.w==='open'){openFile();return}
+  fileHandle=null;load(b.dataset.w==='sample'?buildSample():newProject());$('#dWelcome').close()});
+(function init(){
+  let saved=null;try{saved=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}
+  try{if(saved){load(saved);return}}catch(e){}
+  P=newProject();hist=[];commit();refresh(true);$('#dWelcome').showModal();
+})();
+</script>
+</body>
+</html>
